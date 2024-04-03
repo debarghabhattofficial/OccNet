@@ -15,7 +15,15 @@ from .ray_metrics import main as ray_based_miou
 from .ray_metrics import process_one_sample, generate_lidar_rays
 from torch.utils.data import DataLoader
 from nuscenes.nuscenes import NuScenes
-from .ego_pose_extractor import EgoPoseDataset
+
+# Following lines are added by DEB to import the EgoPoseDataset class.
+# The original import statement is given at the top.
+# ======================================================================
+# from ....tools.ray_iou.ego_pose_extractor import EgoPoseDataset  # ORIGINAL
+import sys  # DEB
+sys.path.append("../../tools")  # DEB
+from ray_iou.ego_pose_extractor import EgoPoseDataset  # DEB
+# ======================================================================
 
 
 @DATASETS.register_module()
@@ -193,17 +201,7 @@ class NuSceneOcc(NuScenesDataset):
         result_dict = {}
 
         if 'LightwheelOcc' in self.version:
-            # lightwheelocc is 10Hz, downsample to 1/5
-            if self.load_interval == 5:
-                data_infos = self.data_infos
-            elif self.load_interval == 1:
-                print('[WARNING] Please set `load_interval` to 5 in for LightwheelOcc test submission!')
-                print('[WARNING] Current format_results will continue!')
-                data_infos = self.data_infos[::5]
-            else:
-                raise ValueError('Please set `load_interval` to 5 in for LightwheelOcc test submission!')
-
-            ego_pose_dataset = EgoPoseDataset(data_infos, dataset_type='lightwheelocc')
+            ego_pose_dataset = EgoPoseDataset(self.data_infos, dataset_type='lightwheelocc')
         else:
             ego_pose_dataset = EgoPoseDataset(self.data_infos, dataset_type='openocc_v2')
 
