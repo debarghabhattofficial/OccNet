@@ -161,15 +161,28 @@ def single_gpu_test(model,
     for i, data in enumerate(data_loader):
         with torch.no_grad():
             result = model(return_loss=False, rescale=True, **data)
-            result["occ_results"] = result["occ_results"].squeeze(0).cpu().numpy().astype(np.uint8)  # DEB
-            result["flow_results"] = result["flow_results"].squeeze(0).cpu().numpy().astype(np.uint8)  # DEB
+            # result["occ_results"] = result["occ_results"].squeeze(0).cpu().numpy().astype(np.uint8)  # DEB
+            # result["flow_results"] = result["flow_results"].squeeze(0).cpu().numpy().astype(np.uint8)  # DEB
 
         # results.extend([result.squeeze(dim=0).cpu().numpy().astype(np.uint8)])  # ORIGINAL
         results.extend([result])
 
         batch_size = len(result)
-        for _ in range(batch_size):
-            prog_bar.update()
+        # # Following was the original code for updating the 
+        # # progress bar. This is incorrect because progrress
+        # # bar is being updated 'batch_size' no. of times, which
+        # # is always set to 2 on account of result being a dict object
+        # # with 2 key-value pairs.
+        # # ===========================================================
+        # for _ in range(batch_size):
+        #     prog_bar.update()
+        # # ===========================================================
+        
+        # Following is the correct ay of updating the progress bar.
+        # This is written by DEB.
+        # =============================================================
+        prog_bar.update()
+        # =============================================================
     return results
 
 

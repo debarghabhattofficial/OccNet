@@ -165,7 +165,7 @@ class NuSceneOcc(NuScenesDataset):
             "pin_memory": False,
             "shuffle": False,
             "batch_size": 1,
-            "num_workers": 8,
+            "num_workers": 1,  # ORIGINAL: 8, DEB: 1
         }
 
         data_loader = DataLoader(
@@ -209,7 +209,7 @@ class NuSceneOcc(NuScenesDataset):
             "pin_memory": False,
             "shuffle": False,
             "batch_size": 1,
-            "num_workers": 8,
+            "num_workers": 1,  # ORIGINAL: 8, DEB: 1
         }
 
         data_loader = DataLoader(

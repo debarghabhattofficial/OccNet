@@ -183,8 +183,8 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=1,
-    workers_per_gpu=4,
+    samples_per_gpu=1,  # ORIGINAL: 1, DEB: 8
+    workers_per_gpu=1,  # ORIGINAL: 4, DEB: 1
     train=dict(
         type=dataset_type,
         data_root=data_root,
@@ -202,12 +202,13 @@ data = dict(
              data_root=data_root,
              ann_file=data_root + 'nuscenes_infos_val_occ.pkl',
              pipeline=test_pipeline, filter_empty_gt=False,
-             classes=class_names, modality=input_modality, samples_per_gpu=1),
+             classes=class_names, modality=input_modality, samples_per_gpu=1), 
     test=dict(type=dataset_type,
               data_root=data_root,
               ann_file=data_root + 'nuscenes_infos_val_occ.pkl',
               pipeline=test_pipeline, filter_empty_gt=False,
-              classes=class_names, modality=input_modality),
+              # classes=class_names, modality=input_modality),  # ORIGINAL
+              classes=class_names, modality=input_modality, samples_per_gpu=1),  # DEB
     shuffler_sampler=dict(type='DistributedGroupSampler'),
     nonshuffler_sampler=dict(type='DistributedSampler')
 )

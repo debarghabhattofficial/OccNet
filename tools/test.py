@@ -12,14 +12,24 @@ import warnings
 from mmcv import Config, DictAction
 from mmcv.cnn import fuse_conv_bn
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
-from mmcv.runner import (get_dist_info, init_dist, load_checkpoint,
-                         wrap_fp16_model)
+from mmcv.runner import (
+    get_dist_info, init_dist, 
+    load_checkpoint, wrap_fp16_model
+)
 from mmdet3d.datasets import build_dataset
+# The original import statement is given at the top.
+# NOTE: The path to be appeneded is relative to
+# the bash script which is actually calling the current
+# script.
+# ======================================================================
+import sys  # DEB
+sys.path.append(".")  # DEB
 from projects.mmdet3d_plugin.datasets.builder import build_dataloader
-from mmdet3d.models import build_model
-from mmdet.apis import set_random_seed
 from projects.mmdet3d_plugin.bevformer.apis.test import custom_multi_gpu_test  # ORIGINAL
 from projects.mmdet3d_plugin.bevformer.apis.test import single_gpu_test  # DEB
+# ======================================================================
+from mmdet3d.models import build_model
+from mmdet.apis import set_random_seed
 from mmdet.datasets import replace_ImageToTensor
 import time
 import os.path as osp
