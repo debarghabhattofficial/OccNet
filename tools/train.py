@@ -29,6 +29,15 @@ from mmseg import __version__ as mmseg_version
 
 from mmcv.utils import TORCH_VERSION, digit_version
 
+# The original import statement is given at the top.
+# NOTE: The path to be appeneded is relative to
+# the bash script which is actually calling the current
+# script.
+# ======================================================================
+import sys  # DEB
+sys.path.append(".")  # DEB
+# ======================================================================
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a detector')
