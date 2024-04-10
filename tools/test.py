@@ -279,7 +279,7 @@ def main():
                 eval_kwargs.pop(key, None)
             eval_kwargs.update(dict(metric=args.eval, **kwargs))
 
-            dataset.evaluate_miou(outputs,show_dir=args.show_dir, **eval_kwargs)
+            dataset.evaluate_miou(outputs, show_dir=args.show_dir, **eval_kwargs)
 
 
 if __name__ == '__main__':
