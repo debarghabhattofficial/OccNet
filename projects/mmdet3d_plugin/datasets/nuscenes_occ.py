@@ -23,6 +23,9 @@ from nuscenes.nuscenes import NuScenes
 import sys  # DEB
 sys.path.append("../../tools")  # DEB
 from ray_iou.ego_pose_extractor import EgoPoseDataset  # DEB
+
+import torch.multiprocessing  # DEB
+torch.multiprocessing.set_sharing_strategy("file_system")  # DEB
 # ======================================================================
 
 

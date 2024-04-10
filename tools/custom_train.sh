@@ -1,17 +1,18 @@
 #!/bin/bash
 
-GPU_NODE=0
+
 CONFIG="./projects/configs/bevformer/bevformer_base_occ.py"
-CHECKPOINT="./work_dirs/bevformer_base_occ/r101_dcn_fcos3d_pretrain.pth"
+WORK_DIR="./work_dirs/bevformer_base_occ-2024_04_10/"
+NUM_GPUS=1
 
 
 # Following is the command executed by DEB for single_gpu_test().
 # =========================================================================
-srun --gres=gpu:ada1:1 \
-    --mem-per-gpu=gpu_mem:6000 \
-    --cpus-per-task=2 \
-python "./tools/test.py" \
+# srun --gres=gpu:ada1:1 \
+#     --mem-per-gpu=gpu_mem:16384 \
+#     --cpus-per-task=2 \
+python "./tools/train.py" \
     $CONFIG \
-    $CHECKPOINT \
-    --eval bbox
+    --work-dir $WORK_DIR \
+    --gpus $NUM_GPUS
 # ==========================================================================
