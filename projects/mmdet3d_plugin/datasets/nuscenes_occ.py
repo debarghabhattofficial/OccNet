@@ -192,8 +192,8 @@ class NuSceneOcc(NuScenesDataset):
             lidar_origins.append(output_origin)
             occ_gts.append(gt_semantics)
             flow_gts.append(gt_flow)
-            occ_preds.append(occ_results[data_id]['occ_results'].cpu().numpy())
-            flow_preds.append(occ_results[data_id]['flow_results'].cpu().numpy())
+            occ_preds.append(occ_results[data_id]["occ_results"].cpu().numpy())
+            flow_preds.append(occ_results[data_id]["flow_results"].cpu().numpy())
         
         ray_based_miou(occ_preds, occ_gts, flow_preds, flow_gts, lidar_origins)
 

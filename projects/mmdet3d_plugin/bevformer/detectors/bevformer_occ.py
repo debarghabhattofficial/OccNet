@@ -16,6 +16,8 @@ import numpy as np
 import mmdet3d
 from projects.mmdet3d_plugin.models.utils.bricks import run_time
 
+from pprint import pprint  # DEB
+
 
 @DETECTORS.register_module()
 class BEVFormerOcc(MVXTwoStageDetector):
@@ -141,7 +143,10 @@ class BEVFormerOcc(MVXTwoStageDetector):
         dummy_metas = None
         return self.forward_test(img=img, img_metas=[[dummy_metas]])
 
-    def forward(self, return_loss=True, **kwargs):
+    def forward(self, 
+                img_metas,
+                img,
+                return_loss=True,):
         """Calls either forward_train or forward_test depending on whether
         return_loss=True.
         Note this setting will change the expected inputs. When
@@ -151,12 +156,30 @@ class BEVFormerOcc(MVXTwoStageDetector):
         list[list[dict]]), with the outer list indicating test time
         augmentations.
         """
-        if return_loss:
-            return self.forward_train(**kwargs)
-        else:
-            return self.forward_test(**kwargs)
+        # This is the original code.
+        # We remove it for onnx export.
+        # ==========================================
+        # if return_loss:
+        #     return self.forward_train(**kwargs)
+        # else:
+        #     return self.forward_test(**kwargs)
+        # ==========================================
+        # This is the code written by DEB.
+        # ==========================================
+        # print(f"kwargs: ")  # DEB
+        # pprint(kwargs.keys())  # DEB
+        # print("-" * 75)  # DEB
+        # img_metas = kwargs.get("img_metas")  # DEB
+        # img = kwargs.get("img")  # DEB
+        return self.forward_test(
+            img_metas=img_metas, 
+            img=img
+        )
+        # ==========================================
 
-    def obtain_history_bev(self, imgs_queue, img_metas_list):
+    def obtain_history_bev(self, 
+                           imgs_queue, 
+                           img_metas_list):
         """Obtain history BEV features iteratively. To save GPU memory, gradients are not calculated.
         """
         self.eval()
@@ -193,8 +216,7 @@ class BEVFormerOcc(MVXTwoStageDetector):
                       proposals=None,
                       gt_bboxes_ignore=None,
                       img_depth=None,
-                      img_mask=None,
-                      ):
+                      img_mask=None,):
         """Forward training function.
         Args:
             points (list[torch.Tensor], optional): Points of each sample.
@@ -228,26 +250,57 @@ class BEVFormerOcc(MVXTwoStageDetector):
         losses.update(losses_pts)
         return losses
 
-    def forward_test(self, img_metas,
+    def forward_test(self, 
+                     img_metas,
                      img=None,
                      voxel_semantics=None,
                      mask_lidar=None,
-                     mask_camera=None,
-                     **kwargs):
+                     mask_camera=None,): #**kwargs):
         for var, name in [(img_metas, 'img_metas')]:
             if not isinstance(var, list):
                 raise TypeError('{} must be a list, but got {}'.format(
                     name, type(var)))
         img = [img] if img is None else img
         
-        new_prev_bev, occ_results, flow_results = self.simple_test(
-            img_metas[0], img[0], prev_bev=None, **kwargs)
+        # This is the original code ehich is replaced
+        # DEB to make the code compatible to be used with
+        # the onnx export.
+        # ======================================
+        # new_prev_bev, occ_results, \
+        #     flow_results = self.simple_test(
+        #         img_metas[0], 
+        #         img[0], 
+        #         prev_bev=None, 
+        #         **kwargs
+        #     )
+        # ======================================
+        # Following is the replacement code
+        # written by DEB.
+        # ======================================
+        new_prev_bev, occ_results, \
+            flow_results = self.simple_test(
+                img_metas[0], 
+                img[0], 
+                prev_bev=None, 
+                rescale=True
+            )
+        # ======================================
         # During inference, we save the BEV features and ego motion of each timestamp.
 
+        # Following was the original code.
+        # =========================================
+        # return {
+        #     'occ_results': occ_results.cpu(),
+        #     'flow_results': flow_results.cpu(),
+        # }
+        # =========================================
+        # Following is the modified code by DEB.
+        # =========================================
         return {
-            'occ_results': occ_results.cpu(),
-            'flow_results': flow_results.cpu(),
+            "occ_results": occ_results,
+            "flow_results": flow_results,
         }
+        # =========================================
 
     def simple_test_pts(self, x, img_metas, prev_bev=None, rescale=False):
         """Test function"""

@@ -1,3 +1,11 @@
+# BEvFormer-small consumes at lease 10500M GPU memory
+# compared to bevformer_base, bevformer_small has
+# smaller BEV: 200*200 -> 150*150
+# less encoder layers: 6 -> 3
+# smaller input size: 1600*900 -> (1600*900)*0.8
+# multi-scale feautres -> single scale features (C5)
+# with_cp of backbone = True
+
 _base_ = [
     '../datasets/custom_nus-3d.py',
     '../_base_/default_runtime.py'
@@ -10,6 +18,7 @@ plugin_dir = 'projects/mmdet3d_plugin/'
 # their point cloud range accordingly.
 point_cloud_range = [-40, -40, -1.0, 40, 40, 5.4]
 voxel_size = [0.2, 0.2, 8]
+
 
 img_norm_cfg = dict(
     mean=[103.530, 116.280, 123.675], 
@@ -47,8 +56,9 @@ _pos_dim_ = _dim_//2
 _ffn_dim_ = _dim_*2
 _num_levels_ = 4
 _num_classes_ = len(occ_class_names)
-bev_h_ = 200
-bev_w_ = 200
+bev_h_ = 150
+bev_w_ = 150
+queue_length = 3 # each sequence contains `queue_length` frames.
 
 model = dict(
     type="BEVFormerOcc",
@@ -60,19 +70,19 @@ model = dict(
         num_stages=4,
         out_indices=(1, 2, 3),
         frozen_stages=1,
-        norm_cfg=dict(type="BN2d", requires_grad=True),
+        norm_cfg=dict(type='BN2d', requires_grad=True),
         norm_eval=True,
         style="pytorch",
-        with_cp=False,
+        with_cp=False, # using checkpoint to save GPU memory
         pretrained="torchvision://resnet50"
     ),
     img_neck=dict(
         type="FPN",
-        in_channels=[512, 1024, 2048],
+        in_channels=[2048],
         out_channels=_dim_,
         start_level=0,
         add_extra_convs="on_output",
-        num_outs=4,
+        num_outs=_num_levels_,
         relu_before_extra_convs=True
     ),
     pts_bbox_head=dict(
@@ -112,9 +122,9 @@ model = dict(
             embed_dims=_dim_,
             encoder=dict(
                 type="BEVFormerEncoder",
-                num_layers=4,
+                num_layers=3,
                 pc_range=point_cloud_range,
-                num_points_in_pillar=8,
+                num_points_in_pillar=4,
                 return_intermediate=False,
                 transformerlayers=dict(
                     type="BEVFormerLayer",
@@ -131,7 +141,8 @@ model = dict(
                                 type="MSDeformableAttention3D",
                                 embed_dims=_dim_,
                                 num_points=8,
-                                num_levels=_num_levels_),
+                                num_levels=_num_levels_
+                            ),
                             embed_dims=_dim_,
                         )
                     ],
@@ -164,6 +175,7 @@ dataset_type = "NuSceneOcc"
 data_root = "data/nuscenes/"
 file_client_args = dict(backend="disk")
 
+
 train_pipeline = [
     dict(type="LoadMultiViewImageFromFiles", to_float32=True),
     dict(type="LoadOccGTFromFile"),
@@ -171,17 +183,17 @@ train_pipeline = [
     dict(type="LoadAnnotations3D", with_bbox_3d=True, with_label_3d=True, with_attr_label=False),
     dict(type="ObjectRangeFilter", point_cloud_range=point_cloud_range),
     dict(type="ObjectNameFilter", classes=class_names),
-    dict(type="NormalizeMultiviewImage", **img_norm_cfg),
+    dict(type='NormalizeMultiviewImage', **img_norm_cfg),
     dict(type="PadMultiViewImage", size_divisor=32),
     dict(type="DefaultFormatBundle3D", class_names=class_names),
-    dict(type="CustomCollect3D", keys=["img", "voxel_semantics", "voxel_flow"] )
+    dict(type="CustomCollect3D", keys=["img", "voxel_semantics", "voxel_flow"])
 ]
 
 test_pipeline = [
     dict(type="LoadMultiViewImageFromFiles", to_float32=True),
     dict(type="LoadOccGTFromFile"),
-    dict(type='NormalizeMultiviewImage', **img_norm_cfg),
-    dict(type='PadMultiViewImage', size_divisor=32),
+    dict(type="NormalizeMultiviewImage", **img_norm_cfg),
+    dict(type="PadMultiViewImage", size_divisor=32),
     dict(
         type="MultiScaleFlipAug3D",
         img_scale=(1600, 900),
@@ -197,7 +209,7 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=1,  # ORIGINAL: 1, DEB: 8
+    samples_per_gpu=1,
     workers_per_gpu=1,  # ORIGINAL: 4, DEB: 1
     train=dict(
         type=dataset_type,
@@ -216,7 +228,7 @@ data = dict(
              data_root=data_root,
              ann_file=data_root + "nuscenes_infos_val_occ.pkl",
              pipeline=test_pipeline, filter_empty_gt=False,
-             classes=class_names, modality=input_modality, samples_per_gpu=1), 
+             classes=class_names, modality=input_modality, samples_per_gpu=1),
     test=dict(type=dataset_type,
               data_root=data_root,
               ann_file=data_root + "nuscenes_infos_val_occ.pkl",
@@ -226,6 +238,7 @@ data = dict(
     shuffler_sampler=dict(type="DistributedGroupSampler"),
     nonshuffler_sampler=dict(type="DistributedSampler")
 )
+
 optimizer = dict(
     type="AdamW",
     lr=2e-4,
@@ -246,7 +259,7 @@ lr_config = dict(
 total_epochs = 24
 evaluation = dict(interval=24, pipeline=test_pipeline)
 
-runner = dict(type="EpochBasedRunner", max_epochs=total_epochs)
+runner = dict(type='EpochBasedRunner', max_epochs=total_epochs)
 load_from = None
 log_config = dict(
     interval=50,

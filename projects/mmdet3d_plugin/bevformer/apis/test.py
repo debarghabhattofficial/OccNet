@@ -17,6 +17,8 @@ from mmcv.runner import get_dist_info
 
 from mmdet.core import encode_mask_results
 
+from pprint import pprint
+
 
 import mmcv
 import numpy as np
@@ -160,6 +162,16 @@ def single_gpu_test(model,
     prog_bar = mmcv.ProgressBar(len(dataset))
     for i, data in enumerate(data_loader):
         with torch.no_grad():
+            print(f"data: ")  # DEB
+            pprint(data.keys())  # DEB
+            print("-" * 75)  # DEB
+            pprint(data["img"][0]._data[0].shape)  # DEB
+            print("-" * 75)  # DEB
+            pprint(data["img_metas"][0]._data[0][0].keys())  # DEB
+            print("-" * 75)  # DEB
+            pprint(data["img_metas"][0]._data[0][0])  # DEB
+            print("-" * 75)  # DEB
+            quit()  # DEB
             result = model(return_loss=False, rescale=True, **data)
             # result["occ_results"] = result["occ_results"].squeeze(0).cpu().numpy().astype(np.uint8)  # DEB
             # result["flow_results"] = result["flow_results"].squeeze(0).cpu().numpy().astype(np.uint8)  # DEB
