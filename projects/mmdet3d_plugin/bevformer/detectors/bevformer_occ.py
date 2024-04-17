@@ -42,17 +42,33 @@ class BEVFormerOcc(MVXTwoStageDetector):
                  train_cfg=None,
                  test_cfg=None,
                  pretrained=None,
-                 video_test_mode=False
-                 ):
+                 video_test_mode=False):
 
-        super(BEVFormerOcc,
-              self).__init__(pts_voxel_layer, pts_voxel_encoder,
-                             pts_middle_encoder, pts_fusion_layer,
-                             img_backbone, pts_backbone, img_neck, pts_neck,
-                             pts_bbox_head, img_roi_head, img_rpn_head,
-                             train_cfg, test_cfg, pretrained)
+        super(BEVFormerOcc, self).__init__(
+            pts_voxel_layer, 
+            pts_voxel_encoder,
+            pts_middle_encoder, 
+            pts_fusion_layer,
+            img_backbone, 
+            pts_backbone, 
+            img_neck, 
+            pts_neck,
+            pts_bbox_head, 
+            img_roi_head, 
+            img_rpn_head,
+            train_cfg, 
+            test_cfg, 
+            pretrained
+        )
         self.grid_mask = GridMask(
-            True, True, rotate=1, offset=False, ratio=0.5, mode=1, prob=0.7)
+            True, 
+            True, 
+            rotate=1, 
+            offset=False, 
+            ratio=0.5, 
+            mode=1, 
+            prob=0.7
+        )
         self.use_grid_mask = use_grid_mask
         self.fp16_enabled = False
 
@@ -135,8 +151,16 @@ class BEVFormerOcc(MVXTwoStageDetector):
 
         outs = self.pts_bbox_head(
             pts_feats, img_metas, prev_bev)
-        loss_inputs = [voxel_semantics, voxel_flow, mask_camera, outs]
-        losses = self.pts_bbox_head.loss(*loss_inputs, img_metas=img_metas)
+        loss_inputs = [
+            voxel_semantics, 
+            voxel_flow, 
+            mask_camera, 
+            outs
+        ]
+        losses = self.pts_bbox_head.loss(
+            *loss_inputs, 
+            img_metas=img_metas
+        )
         return losses
 
     def forward_dummy(self, img):
@@ -188,15 +212,25 @@ class BEVFormerOcc(MVXTwoStageDetector):
             prev_bev = None
             bs, len_queue, num_cams, C, H, W = imgs_queue.shape
             imgs_queue = imgs_queue.reshape(bs * len_queue, num_cams, C, H, W)
-            img_feats_list = self.extract_feat(img=imgs_queue, len_queue=len_queue)
+            img_feats_list = self.extract_feat(
+                img=imgs_queue, 
+                len_queue=len_queue
+            )
             for i in range(len_queue):
                 img_metas = [each[i] for each in img_metas_list]
                 if not img_metas[0]['prev_bev_exists']:
                     prev_bev = None
                 # img_feats = self.extract_feat(img=img, img_metas=img_metas)
-                img_feats = [each_scale[:, i] for each_scale in img_feats_list]
+                img_feats = [
+                    each_scale[:, i] 
+                    for each_scale in img_feats_list
+                ]
                 prev_bev = self.pts_bbox_head(
-                    img_feats, img_metas, prev_bev, only_bev=True)
+                    img_feats, 
+                    img_metas, 
+                    prev_bev, 
+                    only_bev=True
+                )
             self.train()
             return prev_bev
 
@@ -241,11 +275,22 @@ class BEVFormerOcc(MVXTwoStageDetector):
             dict: Losses of different branches.
         """
 
-        img_feats = self.extract_feat(img=img, img_metas=img_metas)
+        img_feats = self.extract_feat(
+            img=img, 
+            img_metas=img_metas
+        )
         losses = dict()
-        losses_pts = self.forward_pts_train(img_feats, gt_bboxes_3d,
-                                            gt_labels_3d, voxel_semantics, voxel_flow, mask_camera, img_metas,
-                                            gt_bboxes_ignore, prev_bev=None)
+        losses_pts = self.forward_pts_train(
+            img_feats, 
+            gt_bboxes_3d,
+            gt_labels_3d, 
+            voxel_semantics, 
+            voxel_flow, 
+            mask_camera, 
+            img_metas,
+            gt_bboxes_ignore, 
+            prev_bev=None
+        )
 
         losses.update(losses_pts)
         return losses
@@ -304,12 +349,20 @@ class BEVFormerOcc(MVXTwoStageDetector):
 
     def simple_test_pts(self, x, img_metas, prev_bev=None, rescale=False):
         """Test function"""
-        outs = self.pts_bbox_head(x, img_metas, prev_bev=prev_bev, test=True)
+        outs = self.pts_bbox_head(
+            x, 
+            img_metas, 
+            prev_bev=prev_bev, 
+            test=True
+        )
 
         occ, flow = self.pts_bbox_head.get_occ(
-            outs, img_metas, rescale=rescale)
+            outs, 
+            img_metas, 
+            rescale=rescale
+        )
 
-        return outs['bev_embed'], occ, flow
+        return outs["bev_embed"], occ, flow
 
     def simple_test(self, img_metas, img=None, prev_bev=None, rescale=False):
         """Test function without augmentaiton."""
@@ -317,7 +370,11 @@ class BEVFormerOcc(MVXTwoStageDetector):
 
         # bbox_list = [dict() for i in range(len(img_metas))]
         new_prev_bev, occ, flow = self.simple_test_pts(
-            img_feats, img_metas, prev_bev, rescale=rescale)
+            img_feats, 
+            img_metas, 
+            prev_bev, 
+            rescale=rescale
+        )
         # for result_dict, pts_bbox in zip(bbox_list, bbox_pts):
         #     result_dict['pts_bbox'] = pts_bbox
         return new_prev_bev, occ, flow

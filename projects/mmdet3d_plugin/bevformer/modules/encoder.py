@@ -96,6 +96,9 @@ class BEVFormerEncoder(TransformerLayerSequence):
 
         for img_meta in img_metas:
             lidar2img.append(img_meta['lidar2img'])
+        print(f"lidar2img type: {type(lidar2img)}")  # DEB
+        print("-" * 75)  # DEB
+        quit()
         lidar2img = np.asarray(lidar2img)
         lidar2img = reference_points.new_tensor(lidar2img)  # (B, N, 4, 4)
         ego2lidar = reference_points.new_tensor(ego2lidar)
