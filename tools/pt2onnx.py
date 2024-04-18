@@ -256,12 +256,44 @@ def main():
         sample_input = data
         # pprint(data["img_metas"][0]._data[0][0])  # DEB
         # print("-" * 75)  # DEB
+        joy_type_debug = [
+            (key, type(value))
+            for key, value in sample_input["img_metas"][0]._data[0][0].items()
+        ]  # DEB
+        # print(f"joy_type_debug: ")  # DEB
+        # pprint(joy_type_debug)  # DEB
+        # print("-" * 75)  # DEB
+        # print(f"ego2lidar shape: ", end="")  # DEB
+        # print(sample_input["img_metas"][0]._data[0][0]["ego2lidar"].shape)  # DEB
+        # print("-" * 75)  # DEB
+        # print(f"lidar2img[0] shape: ", end="")  # DEB
+        # print(sample_input["img_metas"][0]._data[0][0]["lidar2img"][0].shape)  # DEB
+        # print("-" * 75)  # DEB
+        # print(f"lidar2img: {len(sample_input['img_metas'][0]._data[0][0]['lidar2img'])}")
+        # print(f"lidar2img: ")  # DEB
+        # print(sample_input["img_metas"][0]._data[0][0]["lidar2img"])  # DEB
+        # print("-" * 75)  # DEB
+        # print(f"lidar2img: ")  # DEB
+        # print(torch.tensor(sample_input["img_metas"][0]._data[0][0]["lidar2img"]))  # DEB
+        # print("-" * 75)  # DEB
+        # quit()
         sample_input["img"][0]._data[0] = sample_input["img"][0]._data[0].to(DEVICE)
         sample_input["img_metas"][0]._data[0][0]["ego2lidar"] = torch.tensor(sample_input["img_metas"][0]._data[0][0]["ego2lidar"]).to(DEVICE)
         sample_input["img_metas"][0]._data[0][0]["img_norm_cfg"]["mean"] = torch.tensor(sample_input["img_metas"][0]._data[0][0]["img_norm_cfg"]["mean"]).to(DEVICE)
         sample_input["img_metas"][0]._data[0][0]["img_norm_cfg"]["std"] = torch.tensor(sample_input["img_metas"][0]._data[0][0]["img_norm_cfg"]["std"]).to(DEVICE)
         sample_input["img_metas"][0]._data[0][0]["lidar2img"] = torch.tensor(sample_input["img_metas"][0]._data[0][0]["lidar2img"]).to(DEVICE)
+        # sample_input["img_metas"][0]._data[0][0]["lidar2img"] = torch.stack([
+        #     torch.tensor(sample_input["img_metas"][0]._data[0][0]["lidar2img"][li_i]).to(DEVICE)
+        #     for li_i in range(len(sample_input["img_metas"][0]._data[0][0]["lidar2img"]))
+        # ], dim=0)
         # print(type(sample_input["img_metas"][0]._data[0][0]))
+        joy_type_debug = [
+            (key, type(value))
+            for key, value in sample_input["img_metas"][0]._data[0][0].items()
+        ]  # DEB
+        print(f"joy_type_debug: ")  # DEB
+        pprint(joy_type_debug)  # DEB
+        print("-" * 75)  # DEB
         print(sample_input["img_metas"][0]._data[0][0].keys())
         print("-" * 75)
         del sample_input["img_metas"][0]._data[0][0]["box_mode_3d"]
@@ -277,16 +309,14 @@ def main():
         # print("-" * 75)  # DEB
         # break
     # print(f"sample_input: {sample_input}")
-    # output = None
-    # with torch.no_grad():
-    #     output = model(
-    #         return_loss=False,
-    #         rescale=True,
-    #         img_metas=sample_input["img_metas"][0]._data,
-    #         img=sample_input["img"][0]._data
-    #     )
-    #     print(f"output: \n{output}")
-    #     print("-" * 75)
+    output = None
+    with torch.no_grad():
+        output = model(
+            img_metas=sample_input["img_metas"][0]._data,
+            img=sample_input["img"][0]._data
+        )
+        print(f"output: \n{output}")
+        print("-" * 75)
     
     # dummy_input = {
     #     "img_metas": sample_input["img_metas"][0]._data,
@@ -312,9 +342,9 @@ def main():
         opset_version=opset_version,
         verbose=verbose,
     )
-    # model_onnx = onnx.load(output_path)  # Load onnx model.
-    # onnx.checker.check_model(model_onnx)  # Check onnx model.
-    # onnx.save(model_onnx, output_path)
+    model_onnx = onnx.load(output_path)  # Load onnx model.
+    onnx.checker.check_model(model_onnx)  # Check onnx model.
+    onnx.save(model_onnx, output_path)
     # ============================================
     
 

@@ -52,7 +52,7 @@ class BEVFormerEncoder(TransformerLayerSequence):
         """Get the reference points used in SCA and TSA.
         Args:
             H, W: spatial shape of bev.
-            Z: hight of pillar.
+            Z: height of pillar.
             D: sample D points uniformly from each pillar.
             device (obj:`device`): The device where
                 reference_points should be.
@@ -63,15 +63,33 @@ class BEVFormerEncoder(TransformerLayerSequence):
 
         # reference points in 3D space, used in spatial cross-attention (SCA)
         if dim == '3d':
-            zs = torch.linspace(0.5, Z - 0.5, num_points_in_pillar, dtype=dtype,
-                                device=device).view(-1, 1, 1).expand(num_points_in_pillar, H, W) / Z
-            xs = torch.linspace(0.5, W - 0.5, W, dtype=dtype,
-                                device=device).view(1, 1, W).expand(num_points_in_pillar, H, W) / W
-            ys = torch.linspace(0.5, H - 0.5, H, dtype=dtype,
-                                device=device).view(1, H, 1).expand(num_points_in_pillar, H, W) / H
+            zs = torch.linspace(
+                0.5, 
+                Z - 0.5, 
+                num_points_in_pillar, 
+                dtype=dtype,
+                device=device
+            ).view(-1, 1, 1).expand(num_points_in_pillar, H, W) / Z
+            xs = torch.linspace(
+                0.5, 
+                W - 0.5, 
+                W, 
+                dtype=dtype,
+                device=device
+            ).view(1, 1, W).expand(num_points_in_pillar, H, W) / W
+            ys = torch.linspace(
+                0.5, 
+                H - 0.5, 
+                H, 
+                dtype=dtype,
+                device=device
+            ).view(1, H, 1).expand(num_points_in_pillar, H, W) / H
             ref_3d = torch.stack((xs, ys, zs), -1)
             ref_3d = ref_3d.permute(0, 3, 1, 2).flatten(2).permute(0, 2, 1)
             ref_3d = ref_3d[None].repeat(bs, 1, 1, 1)  #shape: (bs,num_points_in_pillar,h*w,3)
+            print(f"ref_3d shape: {ref_3d.shape}")  # DEB
+            print(f"ref_3d dtype: {ref_3d.dtype}")  # DEB
+            print("-" * 75)  # DEB
             return ref_3d
 
         # reference points on 2D bev plane, used in temporal self-attention (TSA).
@@ -89,22 +107,50 @@ class BEVFormerEncoder(TransformerLayerSequence):
             return ref_2d
 
     # This function must use fp32!!!
-    @force_fp32(apply_to=('reference_points', 'img_metas'))
+    @force_fp32(apply_to=("reference_points", "img_metas"))
     def point_sampling(self, reference_points, pc_range,  img_metas):
-        ego2lidar=img_metas[0]['ego2lidar']
+        ego2lidar=img_metas[0]["ego2lidar"]
         lidar2img = []
-
         for img_meta in img_metas:
-            lidar2img.append(img_meta['lidar2img'])
-        print(f"lidar2img type: {type(lidar2img)}")  # DEB
+            # print(f"[115]: lidar2img shape: {len(img_meta['lidar2img'])}")  # DEB
+            # print(f"[115]: lidar2img[0] shape: {img_meta['lidar2img'][0].shape}")  # DEB
+            print(f"[115]: lidar2img shape: {img_meta['lidar2img'].shape}")  # DEB
+            print("-" * 75)  # DEB
+            lidar2img.append(img_meta["lidar2img"])
+        print(f"[116]: lidar2img type: {type(lidar2img)}")  # DEB
+        print(f"[117]: lidar2img len: {len(lidar2img)}")  # DEB
+        # print(f"lidar2img: \n{lidar2img}")  # DEB
         print("-" * 75)  # DEB
-        quit()
-        lidar2img = np.asarray(lidar2img)
+        lidar2img = torch.stack(
+            lidar2img, 
+            dim=0
+        ).to(reference_points.device).type(reference_points.dtype)
+        print(f"[129]: lidar2img shape: {lidar2img.shape}")  # DEB
+        # print(f"lidar2img: \n{lidar2img}")  # DEB
+        print("-" * 75)  # DEB
+        # lidar2img = np.asarray(lidar2img)
+        # print(f"[121]: lidar2img shape: {lidar2img.shape}")  # DEB
+        # print(f"lidar2img: \n{lidar2img}")  # DEB
+        # print("-" * 75)  # DEB
         lidar2img = reference_points.new_tensor(lidar2img)  # (B, N, 4, 4)
+        print(f"[125]: reference_points shape: {reference_points.shape}")  # DEB
+        print(f"[126]: reference_points dtype: {reference_points.dtype}")  # DEB
+        print("-" * 75)  # DEB
+        print(f"[128]: lidar2img shape: {lidar2img.shape}")  # DEB
+        print(f"[129]: lidar2img dtype: {lidar2img.dtype}")  # DEB
+        print("-" * 75)  # DEB
+        # print(f"lidar2img: \n{lidar2img}")  # DEB
+        print("-" * 75)  # DEB
         ego2lidar = reference_points.new_tensor(ego2lidar)
+        print(f"[134]: ego2lidar shape: {ego2lidar.shape}")  # DEB
+        print(f"[135]: ego2lidar dtype: {ego2lidar.dtype}")  # DEB
+        print("-" * 75)  # DEB
         # ego2lidar = ego2lidar.unsqueeze(dim=0).repeat(num_imgs,1,1).unsqueeze(0)
 
         reference_points = reference_points.clone()
+        print(f"[140]: reference_points shape: {reference_points.shape}")  # DEB
+        print(f"[141]: reference_points dtype: {reference_points.dtype}")  # DEB
+        print("-" * 75)  # DEB
 
         reference_points[..., 0:1] = reference_points[..., 0:1] * \
             (pc_range[3] - pc_range[0]) + pc_range[0]
@@ -195,7 +241,10 @@ class BEVFormerEncoder(TransformerLayerSequence):
             bev_h, bev_w, dim='2d', bs=bev_query.size(1), device=bev_query.device, dtype=bev_query.dtype)
 
         reference_points_cam, bev_mask = self.point_sampling(
-            ref_3d, self.pc_range, kwargs['img_metas'])
+            ref_3d, 
+            self.pc_range, 
+            kwargs['img_metas']
+        )
 
         # bug: this code should be 'shift_ref_2d = ref_2d.clone()', we keep this bug for reproducing our results in paper.
         shift_ref_2d = ref_2d.clone()
