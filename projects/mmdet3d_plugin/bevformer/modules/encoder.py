@@ -48,7 +48,14 @@ class BEVFormerEncoder(TransformerLayerSequence):
         self.fp16_enabled = False
 
     @staticmethod
-    def get_reference_points(H, W, Z=8, num_points_in_pillar=4, dim='3d', bs=1, device='cuda', dtype=torch.float):
+    def get_reference_points(H, 
+                             W, 
+                             Z=8, 
+                             num_points_in_pillar=4, 
+                             dim='3d', 
+                             bs=1, 
+                             device='cuda', 
+                             dtype=torch.float):
         """Get the reference points used in SCA and TSA.
         Args:
             H, W: spatial shape of bev.
@@ -60,7 +67,13 @@ class BEVFormerEncoder(TransformerLayerSequence):
             Tensor: reference points used in decoder, has \
                 shape (bs, num_keys, num_levels, 2).
         """
-
+        print(f"[70]: H: {H}")  # DEB
+        print(f"[71]: W: {W}")  # DEB
+        print(f"[72]: Z: {Z}")  # DEB
+        print(f"[73]: num_points_in_pillar: {num_points_in_pillar}")  # DEB
+        print(f"[74]: dim: {dim}")  # DEB
+        print(f"[75]: bs: {bs}")  # DEB
+        print("-" * 75)  # DEB
         # reference points in 3D space, used in spatial cross-attention (SCA)
         if dim == '3d':
             zs = torch.linspace(
@@ -154,25 +167,54 @@ class BEVFormerEncoder(TransformerLayerSequence):
 
         reference_points[..., 0:1] = reference_points[..., 0:1] * \
             (pc_range[3] - pc_range[0]) + pc_range[0]
+        print(f"[157]: reference_points shape: {reference_points.shape}")  # DEB
+        print(f"[158]: reference_points dtype: {reference_points.dtype}")  # DEB
+        print("-" * 75)  # DEB
         reference_points[..., 1:2] = reference_points[..., 1:2] * \
             (pc_range[4] - pc_range[1]) + pc_range[1]
+        print(f"[162]: reference_points shape: {reference_points.shape}")  # DEB
+        print(f"[163]: reference_points dtype: {reference_points.dtype}")  # DEB
+        print("-" * 75)  # DEB
         reference_points[..., 2:3] = reference_points[..., 2:3] * \
             (pc_range[5] - pc_range[2]) + pc_range[2]
+        print(f"[167]: reference_points shape: {reference_points.shape}")  # DEB
+        print(f"[168]: reference_points dtype: {reference_points.dtype}")  # DEB
+        print("-" * 75)  # DEB
 
         reference_points = torch.cat(
             (reference_points, torch.ones_like(reference_points[..., :1])), -1)
 
         reference_points = reference_points.permute(1, 0, 2, 3) #shape: (num_points_in_pillar,bs,h*w,4)
+        print(f"[166]: reference_points shape: {reference_points.shape}")  # DEB
+        print(f"[167]: reference_points dtype: {reference_points.dtype}")  # DEB
+        print("-" * 75)  # DEB
         D, B, num_query = reference_points.size()[:3] # D=num_points_in_pillar , num_query=h*w
         num_cam = lidar2img.size(1)
 
         reference_points = reference_points.view(
-            D, B, 1, num_query, 4).repeat(1, 1, num_cam, 1, 1).unsqueeze(-1)  #shape: (num_points_in_pillar,bs,num_cam,h*w,4)
+            D, B, 1, num_query, 4
+        ).repeat(1, 1, num_cam, 1, 1).unsqueeze(-1)  #shape: (num_points_in_pillar,bs,num_cam,h*w,4)
 
+        print(f"[172]: lidar2img shape: {lidar2img.shape}")  # DEB
+        print(f"[172]: lidar2img dtype: {lidar2img.dtype}")  # DEB
+        print("-" * 75)  # DEB
+        print(f"[172]: LHS: \n({1}, {B}, {num_cam}, {1}, {4}, {4})")  # DEB
+        print("-" * 75)  # DEB
+        print(f"[173]: RHS: \n({D}, {1}, {1}, {num_query}, {1}, {1})")  # DEB
+        print("-" * 75)  # DEB
         lidar2img = lidar2img.view(
-            1, B, num_cam, 1, 4, 4).repeat(D, 1, 1, num_query, 1, 1)
-        ego2lidar=ego2lidar.view(1,1,1,1,4,4).repeat(D,1,num_cam,num_query,1,1)
-        reference_points_cam = torch.matmul(torch.matmul(lidar2img.to(torch.float32),ego2lidar.to(torch.float32)),reference_points.to(torch.float32)).squeeze(-1)
+            1, B, num_cam, 1, 4, 4
+        ).repeat(D, 1, 1, num_query, 1, 1)
+        ego2lidar = ego2lidar.view(
+            1, 1, 1, 1, 4, 4
+        ).repeat(D, 1, num_cam, num_query, 1, 1)
+        reference_points_cam = torch.matmul(
+            torch.matmul(
+                lidar2img.to(torch.float32), 
+                ego2lidar.to(torch.float32)
+            ), 
+            reference_points.to(torch.float32)
+        ).squeeze(-1)
         eps = 1e-5
 
         bev_mask = (reference_points_cam[..., 2:3] > eps)
@@ -235,10 +277,27 @@ class BEVFormerEncoder(TransformerLayerSequence):
         output = bev_query
         intermediate = []
 
+        print(f"[200]: bs source (bev_query): {bev_query.size(1)}")  # DEB
+        print("-" * 75)  # DEB
+
         ref_3d = self.get_reference_points(
-            bev_h, bev_w, self.pc_range[5]-self.pc_range[2], self.num_points_in_pillar, dim='3d', bs=bev_query.size(1),  device=bev_query.device, dtype=bev_query.dtype)
+            bev_h, 
+            bev_w, 
+            self.pc_range[5] - self.pc_range[2], 
+            self.num_points_in_pillar, 
+            dim="3d", 
+            bs=bev_query.size(1),  
+            device=bev_query.device, 
+            dtype=bev_query.dtype
+        )
         ref_2d = self.get_reference_points(
-            bev_h, bev_w, dim='2d', bs=bev_query.size(1), device=bev_query.device, dtype=bev_query.dtype)
+            bev_h, 
+            bev_w, 
+            dim="2d", 
+            bs=bev_query.size(1), 
+            device=bev_query.device, 
+            dtype=bev_query.dtype
+        )
 
         reference_points_cam, bev_mask = self.point_sampling(
             ref_3d, 

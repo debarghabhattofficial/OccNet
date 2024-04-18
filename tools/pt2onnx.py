@@ -254,58 +254,34 @@ def main():
     sample_input = None
     for _, data in enumerate(data_loader):
         sample_input = data
-        # pprint(data["img_metas"][0]._data[0][0])  # DEB
-        # print("-" * 75)  # DEB
-        joy_type_debug = [
-            (key, type(value))
-            for key, value in sample_input["img_metas"][0]._data[0][0].items()
-        ]  # DEB
+        # # pprint(data["img_metas"][0]._data[0][0])  # DEB
+        # # print("-" * 75)  # DEB
+        # joy_type_debug = [
+        #     (key, type(value))
+        #     for key, value in sample_input["img_metas"][0]._data[0][0].items()
+        # ]  # DEB
+        # sample_input["img"][0]._data[0] = sample_input["img"][0]._data[0].to(DEVICE)
+        # sample_input["img_metas"][0]._data[0][0]["ego2lidar"] = torch.tensor(sample_input["img_metas"][0]._data[0][0]["ego2lidar"]).to(DEVICE)
+        # sample_input["img_metas"][0]._data[0][0]["img_norm_cfg"]["mean"] = torch.tensor(sample_input["img_metas"][0]._data[0][0]["img_norm_cfg"]["mean"]).to(DEVICE)
+        # sample_input["img_metas"][0]._data[0][0]["img_norm_cfg"]["std"] = torch.tensor(sample_input["img_metas"][0]._data[0][0]["img_norm_cfg"]["std"]).to(DEVICE)
+        # sample_input["img_metas"][0]._data[0][0]["lidar2img"] = torch.tensor(sample_input["img_metas"][0]._data[0][0]["lidar2img"]).to(DEVICE)
+        # # sample_input["img_metas"][0]._data[0][0]["lidar2img"] = torch.stack([
+        # #     torch.tensor(sample_input["img_metas"][0]._data[0][0]["lidar2img"][li_i]).to(DEVICE)
+        # #     for li_i in range(len(sample_input["img_metas"][0]._data[0][0]["lidar2img"]))
+        # # ], dim=0)
+        # # print(type(sample_input["img_metas"][0]._data[0][0]))
+        # joy_type_debug = [
+        #     (key, type(value))
+        #     for key, value in sample_input["img_metas"][0]._data[0][0].items()
+        # ]  # DEB
         # print(f"joy_type_debug: ")  # DEB
         # pprint(joy_type_debug)  # DEB
         # print("-" * 75)  # DEB
-        # print(f"ego2lidar shape: ", end="")  # DEB
-        # print(sample_input["img_metas"][0]._data[0][0]["ego2lidar"].shape)  # DEB
-        # print("-" * 75)  # DEB
-        # print(f"lidar2img[0] shape: ", end="")  # DEB
-        # print(sample_input["img_metas"][0]._data[0][0]["lidar2img"][0].shape)  # DEB
-        # print("-" * 75)  # DEB
-        # print(f"lidar2img: {len(sample_input['img_metas'][0]._data[0][0]['lidar2img'])}")
-        # print(f"lidar2img: ")  # DEB
-        # print(sample_input["img_metas"][0]._data[0][0]["lidar2img"])  # DEB
-        # print("-" * 75)  # DEB
-        # print(f"lidar2img: ")  # DEB
-        # print(torch.tensor(sample_input["img_metas"][0]._data[0][0]["lidar2img"]))  # DEB
-        # print("-" * 75)  # DEB
-        # quit()
-        sample_input["img"][0]._data[0] = sample_input["img"][0]._data[0].to(DEVICE)
-        sample_input["img_metas"][0]._data[0][0]["ego2lidar"] = torch.tensor(sample_input["img_metas"][0]._data[0][0]["ego2lidar"]).to(DEVICE)
-        sample_input["img_metas"][0]._data[0][0]["img_norm_cfg"]["mean"] = torch.tensor(sample_input["img_metas"][0]._data[0][0]["img_norm_cfg"]["mean"]).to(DEVICE)
-        sample_input["img_metas"][0]._data[0][0]["img_norm_cfg"]["std"] = torch.tensor(sample_input["img_metas"][0]._data[0][0]["img_norm_cfg"]["std"]).to(DEVICE)
-        sample_input["img_metas"][0]._data[0][0]["lidar2img"] = torch.tensor(sample_input["img_metas"][0]._data[0][0]["lidar2img"]).to(DEVICE)
-        # sample_input["img_metas"][0]._data[0][0]["lidar2img"] = torch.stack([
-        #     torch.tensor(sample_input["img_metas"][0]._data[0][0]["lidar2img"][li_i]).to(DEVICE)
-        #     for li_i in range(len(sample_input["img_metas"][0]._data[0][0]["lidar2img"]))
-        # ], dim=0)
-        # print(type(sample_input["img_metas"][0]._data[0][0]))
-        joy_type_debug = [
-            (key, type(value))
-            for key, value in sample_input["img_metas"][0]._data[0][0].items()
-        ]  # DEB
-        print(f"joy_type_debug: ")  # DEB
-        pprint(joy_type_debug)  # DEB
-        print("-" * 75)  # DEB
-        print(sample_input["img_metas"][0]._data[0][0].keys())
-        print("-" * 75)
-        del sample_input["img_metas"][0]._data[0][0]["box_mode_3d"]
-        del sample_input["img_metas"][0]._data[0][0]["box_type_3d"]
-        print(sample_input["img_metas"][0]._data[0][0].keys())
-        print("-" * 75)  # DEB
-        # pprint(data["img_metas"][0]._data[0][0])  # DEB
-        # print("-" * 75)  # DEB
-        # quit()
-        # print(**sample_input)
-        break
-        # print(f"sample_input: {sample_input}")  # DEB
+        # print(sample_input["img_metas"][0]._data[0][0].keys())
+        # print("-" * 75)
+        # del sample_input["img_metas"][0]._data[0][0]["box_mode_3d"]
+        # del sample_input["img_metas"][0]._data[0][0]["box_type_3d"]
+        # print(sample_input["img_metas"][0]._data[0][0].keys())
         # print("-" * 75)  # DEB
         # break
     # print(f"sample_input: {sample_input}")
@@ -317,6 +293,7 @@ def main():
         )
         print(f"output: \n{output}")
         print("-" * 75)
+        quit()
     
     # dummy_input = {
     #     "img_metas": sample_input["img_metas"][0]._data,
