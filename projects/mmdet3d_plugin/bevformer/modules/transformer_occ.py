@@ -181,9 +181,14 @@ class TransformerOcc(BaseModule):
         """
         obtain bev features.
         """
-
+        print(f"mlvl_feats[0] shape: {mlvl_feats[0].shape}")  # DEB
+        print("-" * 75)  # DEB
         bs = mlvl_feats[0].size(0)
+        print(f"bs: {bs}")  # DEB
+        print("-" * 75)  # DEB
         bev_queries = bev_queries.unsqueeze(1).repeat(1, bs, 1)
+        print(f"bev_queries shape: {bev_queries.shape}")  # DEB
+        print("-" * 75)  # DEB
         bev_pos = bev_pos.flatten(2).permute(2, 0, 1)
 
         if prev_bev is not None:
@@ -290,7 +295,7 @@ class TransformerOcc(BaseModule):
                     be returned when `as_two_stage` is True, \
                     otherwise None.
         """
-
+        
         bev_embed = self.get_bev_features(
             mlvl_feats,
             bev_queries,

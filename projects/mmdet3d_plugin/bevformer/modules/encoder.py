@@ -22,7 +22,143 @@ import mmcv
 from mmcv.utils import TORCH_VERSION, digit_version
 from mmcv.utils import ext_loader
 ext_module = ext_loader.load_ext(
-    '_ext', ['ms_deform_attn_backward', 'ms_deform_attn_forward'])
+    "_ext", 
+    ["ms_deform_attn_backward", "ms_deform_attn_forward"]
+)
+
+
+# The following method is added by DEB as a substitute for
+# the torch methods which do not have a support
+# for export to ONNX opset version 12.
+# ==========================================================
+def custom_linspace(start, end, steps, dtype, device):
+    """
+    Generate a one-dimensional tensor of 'steps' equally 
+    spaced points between 'start' and 'end'.
+
+    Args:
+        start (float): 
+            The starting point of the sequence.
+        end (float): 
+            The ending point of the sequence.
+        steps (int): 
+            The number of steps to generate.
+        dtype (torch.dtype, optional): 
+            The desired data type of the output tensor 
+            (default: None).
+        device (torch.device, optional): 
+            The desired device of the output tensor 
+            (default: None).
+
+    Returns:
+        torch.Tensor: A one-dimensional tensor containing 
+        'steps' equally spaced points between 'start' and 
+        'end'.
+    """
+    if steps < 2:
+        raise ValueError(
+            "'steps' must be greater than or equal to 2."
+        )
+    
+    if dtype is None:
+        dtype = torch.get_default_dtype()
+
+    if device is None:
+        device = torch.device("cpu")
+
+    # Calculate the step size.
+    step_size = (end - start) / (steps - 1)
+
+    # Generate the sequence.
+    sequence = torch.arange(
+        steps, 
+        dtype=dtype, 
+        device=device
+    ) * step_size + start
+
+    return sequence
+
+
+def custom_maximum(input1, input2):
+    """
+    Element-wise maximum of two tensors.
+
+    Args:
+        input1 (torch.Tensor): 
+            The first input tensor.
+        input2 (torch.Tensor): 
+            The second input tensor. 
+            Must have the same shape as input1.
+
+    Returns:
+        torch.Tensor: 
+            A tensor containing the element-wise maximum 
+            values of input1 and input2.
+    """
+    # The following code was in the ORIGINAL script.
+    # DEB is removing it to see if the resultant script 
+    # becomes compatible for ONNX export.
+    # =========================================================
+    # if input1.shape != input2.shape:
+    #     raise ValueError(
+    #         "input1 and input2 must have the same shape."
+    #     )
+    # =========================================================
+
+    return torch.where(input1 > input2, input1, input2)
+
+
+def custom_nan_to_num(input_tensor, 
+                      nan=0.0, 
+                      posinf=None, 
+                      neginf=None):
+    """
+    Replace NaN and infinite values in a tensor 
+    with specified values.
+
+    Args:
+        input_tensor (torch.Tensor): 
+            The input tensor.
+        nan (float, optional): 
+            The value to replace NaN values with (default: 0.0).
+        posinf (float, optional): 
+            The value to replace positive infinity with 
+            (default: None).
+        neginf (float, optional): 
+            The value to replace negative infinity with 
+            (default: None).
+
+    Returns:
+        torch.Tensor: 
+            A tensor with NaN and infinite values replaced 
+            with the specified values.
+    """
+    dtype_kind = str(input_tensor.dtype)
+
+    if "float" in dtype_kind:
+        if posinf is None:
+            posinf = torch.finfo(input_tensor.dtype).max
+        if neginf is None:
+            neginf = torch.finfo(input_tensor.dtype).min
+    elif ("int" in dtype_kind) or ("uint'" in dtype_kind):
+        if posinf is None:
+            posinf = torch.iinfo(input_tensor.dtype).max
+        if neginf is None:
+            neginf = torch.iinfo(input_tensor.dtype).min
+
+    # Replace NaN values
+    input_tensor[input_tensor != input_tensor] = nan
+
+    # Replace positive infinity
+    if posinf is not None:
+        input_tensor[input_tensor == float("inf")] = posinf
+
+    # Replace negative infinity
+    if neginf is not None:
+        input_tensor[input_tensor == float("-inf")] = neginf
+
+    return input_tensor
+# ==========================================================
 
 
 @TRANSFORMER_LAYER_SEQUENCE.register_module()
@@ -76,21 +212,21 @@ class BEVFormerEncoder(TransformerLayerSequence):
         print("-" * 75)  # DEB
         # reference points in 3D space, used in spatial cross-attention (SCA)
         if dim == '3d':
-            zs = torch.linspace(
+            zs = custom_linspace(  # torch.linspace(
                 0.5, 
                 Z - 0.5, 
                 num_points_in_pillar, 
                 dtype=dtype,
                 device=device
             ).view(-1, 1, 1).expand(num_points_in_pillar, H, W) / Z
-            xs = torch.linspace(
+            xs = custom_linspace(  # torch.linspace(
                 0.5, 
                 W - 0.5, 
                 W, 
                 dtype=dtype,
                 device=device
             ).view(1, 1, W).expand(num_points_in_pillar, H, W) / W
-            ys = torch.linspace(
+            ys = custom_linspace(  # torch.linspace(
                 0.5, 
                 H - 0.5, 
                 H, 
@@ -108,10 +244,20 @@ class BEVFormerEncoder(TransformerLayerSequence):
         # reference points on 2D bev plane, used in temporal self-attention (TSA).
         elif dim == '2d':
             ref_y, ref_x = torch.meshgrid(
-                torch.linspace(
-                    0.5, H - 0.5, H, dtype=dtype, device=device),
-                torch.linspace(
-                    0.5, W - 0.5, W, dtype=dtype, device=device)
+                custom_linspace(  # torch.linspace(
+                    0.5, 
+                    H - 0.5, 
+                    H, 
+                    dtype=dtype, 
+                    device=device
+                ),
+                custom_linspace(  # torch.linspace(
+                    0.5, 
+                    W - 0.5, 
+                    W, 
+                    dtype=dtype, 
+                    device=device
+                )
             )
             ref_y = ref_y.reshape(-1)[None] / H
             ref_x = ref_x.reshape(-1)[None] / W
@@ -218,8 +364,14 @@ class BEVFormerEncoder(TransformerLayerSequence):
         eps = 1e-5
 
         bev_mask = (reference_points_cam[..., 2:3] > eps)
-        reference_points_cam = reference_points_cam[..., 0:2] / torch.maximum(
-            reference_points_cam[..., 2:3], torch.ones_like(reference_points_cam[..., 2:3]) * eps)
+        # reference_points_cam = reference_points_cam[..., 0:2] / torch.maximum(
+        #     reference_points_cam[..., 2:3], 
+        #     torch.ones_like(reference_points_cam[..., 2:3]) * eps
+        # )  # ORIGINAL
+        reference_points_cam = reference_points_cam[..., 0:2] / custom_maximum(
+            reference_points_cam[..., 2:3], 
+            torch.ones_like(reference_points_cam[..., 2:3]) * eps
+        )  # DEB
 
         reference_points_cam[..., 0] /= img_metas[0]['img_shape'][0][1]
         reference_points_cam[..., 1] /= img_metas[0]['img_shape'][0][0]
@@ -229,10 +381,16 @@ class BEVFormerEncoder(TransformerLayerSequence):
                     & (reference_points_cam[..., 0:1] < 1.0)
                     & (reference_points_cam[..., 0:1] > 0.0))
         if digit_version(TORCH_VERSION) >= digit_version('1.8'):
-            bev_mask = torch.nan_to_num(bev_mask)
+            # bev_mask = torch.nan_to_num(bev_mask)  # ORIGINAL
+            bev_mask = custom_nan_to_num(bev_mask)  # ORIGINAL
         else:
+            # bev_mask = bev_mask.new_tensor(
+            #     np.nan_to_num(bev_mask.cpu().numpy())
+            # )  # ORIGINAL
             bev_mask = bev_mask.new_tensor(
-                np.nan_to_num(bev_mask.cpu().numpy()))
+                custom_nan_to_num(bev_mask.cpu().numpy())
+            )  # ORIGINAL
+                
 
         reference_points_cam = reference_points_cam.permute(2, 1, 3, 0, 4) #shape: (num_cam,bs,h*w,num_points_in_pillar,2)
 
@@ -277,6 +435,8 @@ class BEVFormerEncoder(TransformerLayerSequence):
         output = bev_query
         intermediate = []
 
+        print(f"[200]: bs source (bev_query) dtype: {bev_query.dtype}")  # DEB
+        print(f"[200]: bs source (bev_query) shape: {bev_query.shape}")  # DEB
         print(f"[200]: bs source (bev_query): {bev_query.size(1)}")  # DEB
         print("-" * 75)  # DEB
 
@@ -467,7 +627,12 @@ class BEVFormerLayer(MyCustomBaseTransformerLayer):
         for layer in self.operation_order:
             # temporal self attention
             if layer == 'self_attn':
-
+                self_attn_spatial_layer = torch.tensor(
+                    [[bev_h, bev_w]], device=query.device
+                )
+                self_attn_level_start_index = torch.tensor(
+                    [0], device=query.device
+                )
                 query = self.attentions[attn_index](
                     query,
                     prev_bev,
@@ -478,10 +643,10 @@ class BEVFormerLayer(MyCustomBaseTransformerLayer):
                     attn_mask=attn_masks[attn_index],
                     key_padding_mask=query_key_padding_mask,
                     reference_points=ref_2d,
-                    spatial_shapes=torch.tensor(
-                        [[bev_h, bev_w]], device=query.device),
-                    level_start_index=torch.tensor([0], device=query.device),
-                    **kwargs)
+                    spatial_shapes=self_attn_spatial_layer,
+                    level_start_index=self_attn_level_start_index,
+                    **kwargs
+                )
                 attn_index += 1
                 identity = query
 

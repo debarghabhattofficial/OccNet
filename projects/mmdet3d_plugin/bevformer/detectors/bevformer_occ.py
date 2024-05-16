@@ -84,6 +84,8 @@ class BEVFormerOcc(MVXTwoStageDetector):
     def extract_img_feat(self, img, img_metas, len_queue=None):
         """Extract features of images."""
         B = img.size(0)
+        print(f"B: {B}")  # DEB
+        print("-" * 75)  # DEB
         if img is not None:
 
             # input_shape = img.shape[-2:]
@@ -120,7 +122,9 @@ class BEVFormerOcc(MVXTwoStageDetector):
     def extract_feat(self, img, img_metas=None, len_queue=None):
         """Extract features from images and points."""
 
-        img_feats = self.extract_img_feat(img, img_metas, len_queue=len_queue)
+        img_feats = self.extract_img_feat(
+            img, img_metas, len_queue=len_queue
+        )
 
         return img_feats
 
@@ -195,6 +199,9 @@ class BEVFormerOcc(MVXTwoStageDetector):
         # print("-" * 75)  # DEB
         # img_metas = kwargs.get("img_metas")  # DEB
         # img = kwargs.get("img")  # DEB
+        # print(f"[bevformer_occ][202]: img len: {len(img)}")  # DEB
+        print(f"[bevformer_occ][203]: img shape: {img.shape}")  # DEB
+        print("-" * 75)  # DEB
         return self.forward_test(
             img_metas=img_metas, 
             img=img
@@ -301,11 +308,24 @@ class BEVFormerOcc(MVXTwoStageDetector):
                      voxel_semantics=None,
                      mask_lidar=None,
                      mask_camera=None,): #**kwargs):
-        for var, name in [(img_metas, 'img_metas')]:
-            if not isinstance(var, list):
-                raise TypeError('{} must be a list, but got {}'.format(
-                    name, type(var)))
-        img = [img] if img is None else img
+        # NOTE: Following type check was in the original code.
+        # We remove it for onnx export (still testing).
+        # =======================================================
+        # for var, name in [(img_metas, 'img_metas')]:
+        #     if not isinstance(var, list):
+        #         raise TypeError('{} must be a list, but got {}'.format(
+        #             name, type(var)))
+        # =======================================================
+
+        # img = [img] if img is None else img  # ORIGINAL
+        img = None if img is None else img  # DEB
+
+        print(f"[bevformer_occ.py][318]: img_metas len: {len(img_metas)}")  # DEB
+        print("-" * 75)  # DEB
+        # print(f"[bevformer_occ.py][320]: img_metas: ") # DEB
+        # pprint(img_metas)  # DEB
+        # print("-" * 75)  # DEB
+
         
         # This is the original code ehich is replaced
         # DEB to make the code compatible to be used with
@@ -324,8 +344,8 @@ class BEVFormerOcc(MVXTwoStageDetector):
         # ======================================
         new_prev_bev, occ_results, \
             flow_results = self.simple_test(
-                img_metas[0], 
-                img[0], 
+                img_metas, # ORIGINAL: img_metas[0], 
+                img,  # ORIGINAL: img[0] 
                 prev_bev=None, 
                 rescale=True
             )
@@ -367,7 +387,8 @@ class BEVFormerOcc(MVXTwoStageDetector):
     def simple_test(self, img_metas, img=None, prev_bev=None, rescale=False):
         """Test function without augmentaiton."""
         img_feats = self.extract_feat(img=img, img_metas=img_metas)
-
+        print(f"img_feats len: {len(img_feats)}")  # DEB
+        print("-" * 75)  # DEB
         # bbox_list = [dict() for i in range(len(img_metas))]
         new_prev_bev, occ, flow = self.simple_test_pts(
             img_feats, 

@@ -164,7 +164,8 @@ class SpatialCrossAttention(BaseModule):
                                             level_start_index=level_start_index).view(bs, self.num_cams, max_len, self.embed_dims)
         for j in range(bs):
             for i, index_query_per_img in enumerate(indexes):
-                slots[j, index_query_per_img] += queries[j, i, :len(index_query_per_img)]
+                # slots[j, index_query_per_img] += queries[j, i, :len(index_query_per_img)]  # ORIGINAL
+                slots[j, index_query_per_img] += queries[j, i, :index_query_per_img.shape[0]]  # DEB
 
         count = bev_mask.sum(-1) > 0
         count = count.permute(1, 2, 0).sum(-1)
@@ -367,7 +368,7 @@ class MSDeformableAttention3D(BaseModule):
                 bs, num_query, num_heads, num_levels, num_all_points // num_Z_anchors, num_Z_anchors, xy)
             sampling_locations = reference_points + sampling_offsets
             bs, num_query, num_heads, num_levels, num_points, num_Z_anchors, xy = sampling_locations.shape
-            assert num_all_points == num_points * num_Z_anchors
+            # assert num_all_points == num_points * num_Z_anchors  # ORIGINAL
 
             sampling_locations = sampling_locations.view(
                 bs, num_query, num_heads, num_levels, num_all_points, xy)

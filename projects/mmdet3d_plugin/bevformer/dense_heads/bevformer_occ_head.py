@@ -113,6 +113,8 @@ class BEVFormerOccHead(BaseModule):
                 head with normalized coordinate format (cx, cy, w, l, cz, h, theta, vx, vy). \
                 Shape [nb_dec, bs, num_query, 9].
         """
+        print(f"mlvl_feats[0]: {mlvl_feats[0].shape}")  # DEB
+        print("-" * 75)  # DEB
         bs, num_cam, _, _, _ = mlvl_feats[0].shape
         dtype = mlvl_feats[0].dtype
         object_query_embeds = None
