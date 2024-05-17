@@ -9,18 +9,29 @@ _base_ = [
 plugin = True
 plugin_dir = 'projects/mmdet3d_plugin/'
 
-# If point cloud range is changed, the models should also change their point
-# cloud range accordingly
+# If point cloud range is changed, the models should also 
+# change their point cloud range accordingly.
 point_cloud_range = [-50.0, -50.0, -5.0, 50.0, 50.0, 3.0]
 voxel_size = [0.2, 0.2, 8]
 occupancy_size = [0.5, 0.5, 0.5]
 
 img_norm_cfg = dict(
-    mean=[103.530, 116.280, 123.675], std=[1.0, 1.0, 1.0], to_rgb=False)
+    mean=[103.530, 116.280, 123.675], 
+    std=[1.0, 1.0, 1.0], 
+    to_rgb=False
+)
 # For nuScenes we usually do 10-class detection
 class_names = [
-    'car', 'truck', 'construction_vehicle', 'bus', 'trailer', 'barrier',
-    'motorcycle', 'bicycle', 'pedestrian', 'traffic_cone'
+    "car", 
+    "truck", 
+    "construction_vehicle", 
+    "bus", 
+    "trailer", 
+    "barrier", 
+    "motorcycle", 
+    "bicycle", 
+    "pedestrian", 
+    "traffic_cone"
 ]
 
 input_modality = dict(
@@ -28,12 +39,13 @@ input_modality = dict(
     use_camera=True,
     use_radar=False,
     use_map=False,
-    use_external=True)
+    use_external=True
+)
 
 _dim_ = 256
 _occupancy_dim_ = 128
 _pos_dim_ = _dim_//2
-_ffn_dim_ = _dim_*2
+_ffn_dim_ = _dim_ * 2
 _num_levels_ = 4
 bev_h_ = 200
 bev_w_ = 200

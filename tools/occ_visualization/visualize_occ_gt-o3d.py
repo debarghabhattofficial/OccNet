@@ -85,8 +85,8 @@ def visualize_occ(points, labels, ego_dict):
     # Visualization
     o3d.visualization.draw_geometries([pcd])
 
-if __name__ == '__main__':
-    occ_path = './data/occ_gt_release_v1_0/train/scene-0001/000_occ.npy'  # TODO set occupancy path
+if __name__ == "__main__":
+    occ_path = "./data/occ_gt_release_v1_0/train/scene-0001/000_occ.npy"  # TODO set occupancy path
 
     # default setting of the data info
     num_classes = 16
@@ -100,6 +100,10 @@ if __name__ == '__main__':
     voxel_num = occ_xdim*occ_ydim*occ_zdim
     
     occ = np.load(occ_path)
+    print(f"occ shape: {occ.shape}")  # DEB
+    print(f"occ: \n{occ}")  # DEB
+    print("-" * 75)  # DEB
+    quit()
     points, labels = obtain_points_label(occ)
     ego_dict = generate_the_ego_car()
     visualize_occ(points, labels, ego_dict)

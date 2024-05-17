@@ -188,3 +188,89 @@ def collect_results_cpu(result_part, size, tmpdir=None):
 
 def collect_results_gpu(result_part, size):
     collect_results_cpu(result_part, size)
+
+
+def single_gpu_test(model,
+                    data_loader,
+                    show=False,
+                    out_dir=None,
+                    show_score_thr=0.3,
+                    occ_threshold=0.25):
+    """Test model with single gpu.
+
+    This method tests model with single gpu and gives the 'show' option.
+    By setting ``show=True``, it saves the visualization results under
+    ``out_dir``.
+
+    Args:
+        model (nn.Module): Model to be tested.
+        data_loader (nn.Dataloader): Pytorch data loader.
+        show (bool): Whether to save viualization results.
+            Default: True.
+        out_dir (str): The path to save visualization results.
+            Default: None.
+
+    Returns:
+        list[dict]: The prediction results.
+    """
+    model.eval()
+    results = []
+    bbox_results = []  # DEB
+    mask_results = []  # DEB
+    occupancy_results = []  # DEB
+    flow_results = []  # DEB
+    dataset = data_loader.dataset
+    prog_bar = mmcv.ProgressBar(len(dataset))
+    for i, data in enumerate(data_loader):
+        with torch.no_grad():
+            result = model(
+                return_loss=False, 
+                rescale=True,
+                occ_threshold=occ_threshold,
+                **data
+            )
+            if (i + 1) == 100:
+                print(f"result type: {type(result)}")  # DEB
+                print(f"results: \n{results}")  # DEB
+                print("-" * 75)  # DEB
+                quit()  # DEB
+
+            # result["occ_results"] = result["occ_results"].squeeze(0).cpu().numpy().astype(np.uint8)  # DEB
+            # result["flow_results"] = result["flow_results"].squeeze(0).cpu().numpy().astype(np.uint8)  # DEB
+
+        # results.extend([result.squeeze(dim=0).cpu().numpy().astype(np.uint8)])  # ORIGINAL
+        results.extend([result])
+
+        batch_size = len(result)
+        # # Following was the original code for updating the 
+        # # progress bar. This is incorrect because progrress
+        # # bar is being updated 'batch_size' no. of times, which
+        # # is always set to 2 on account of result being a dict object
+        # # with 2 key-value pairs.
+        # # ===========================================================
+        # for _ in range(batch_size):
+        #     prog_bar.update()
+        # # ===========================================================
+        
+        # Following is the correct ay of updating the progress bar.
+        # This is written by DEB.
+        # =============================================================
+        prog_bar.update()
+        if i + 1 == 100:
+            break
+        # =============================================================
+    
+    # Output results dictionary
+    print(f"results keys: {results.keys()}")  # DEB
+    print("-" * 75)  # DEB
+    quit()
+
+    results_dict =  {
+        "bbox_results": results["bbox_results"], 
+        "mask_results": results["mask_results"], 
+        "occupancy_results": results["occupancy_results"],
+        "flow_results": results["flow_results"]
+    }
+
+    
+    return results

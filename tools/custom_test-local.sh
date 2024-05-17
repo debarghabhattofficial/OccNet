@@ -2,7 +2,7 @@
 
 
 GPU_NODE=0
-CONFIG="./projects/configs/bevformer/bevformer_base_occ.py"
+CONFIG="./projects/configs/bevformer/bevformer_base.py"
 CHECKPOINT="./work_dirs/bevformer_base_occ/r101_dcn_fcos3d_pretrain.pth"
 
 
@@ -11,5 +11,5 @@ CHECKPOINT="./work_dirs/bevformer_base_occ/r101_dcn_fcos3d_pretrain.pth"
 python "./tools/test.py" \
     $CONFIG \
     $CHECKPOINT \
-    --eval bbox
+    --eval iou
 # ==========================================================================

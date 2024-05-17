@@ -10,15 +10,29 @@ import warnings
 from mmcv import Config, DictAction
 from mmcv.cnn import fuse_conv_bn
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
-from mmcv.runner import (get_dist_info, init_dist, load_checkpoint,
-                         wrap_fp16_model)
-
-from mmdet3d.apis import single_gpu_test
+from mmcv.runner import (
+    get_dist_info, 
+    init_dist, 
+    load_checkpoint,
+    wrap_fp16_model
+)
+# from mmdet3d.apis import single_gpu_test
 from mmdet3d.datasets import build_dataset
+# The original import statement is given at the top.
+# NOTE: The path to be appeneded is relative to
+# the bash script which is actually calling the current
+# script.
+# ======================================================================
+import sys  # DEB
+sys.path.append(".")  # DEB
 from projects.mmdet3d_plugin.datasets.builder import build_dataloader
+from projects.mmdet3d_plugin.bevformer.apis.test import custom_multi_gpu_test  # ORIGINAL
+from projects.mmdet3d_plugin.bevformer.apis.test import single_gpu_test  # DEB
+# ======================================================================
+# from projects.mmdet3d_plugin.datasets.builder import build_dataloader
 from mmdet3d.models import build_model
 from mmdet.apis import set_random_seed
-from projects.mmdet3d_plugin.bevformer.apis.test import custom_multi_gpu_test
+# from projects.mmdet3d_plugin.bevformer.apis.test import custom_multi_gpu_test
 from mmdet.datasets import replace_ImageToTensor
 import time
 import os.path as osp
@@ -154,7 +168,7 @@ def main():
                 plg_lib = importlib.import_module(_module_path)
 
     # set cudnn_benchmark
-    if cfg.get('cudnn_benchmark', False):
+    if cfg.get("cudnn_benchmark", False):
         torch.backends.cudnn.benchmark = True
 
     cfg.model.pretrained = None
@@ -171,7 +185,7 @@ def main():
         for ds_cfg in cfg.data.test:
             ds_cfg.test_mode = True
         samples_per_gpu = max(
-            [ds_cfg.pop('samples_per_gpu', 1) for ds_cfg in cfg.data.test])
+            [ds_cfg.pop("samples_per_gpu", 1) for ds_cfg in cfg.data.test])
         if samples_per_gpu > 1:
             for ds_cfg in cfg.data.test:
                 ds_cfg.pipeline = replace_ImageToTensor(ds_cfg.pipeline)
@@ -200,74 +214,116 @@ def main():
 
     # build the model and load checkpoint
     cfg.model.train_cfg = None
-    model = build_model(cfg.model, test_cfg=cfg.get('test_cfg'))
-    fp16_cfg = cfg.get('fp16', None)
+    model = build_model(cfg.model, test_cfg=cfg.get("test_cfg"))
+    fp16_cfg = cfg.get("fp16", None)
     if fp16_cfg is not None:
         wrap_fp16_model(model)
-    checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+    checkpoint = load_checkpoint(
+        model, args.checkpoint, map_location='cpu'
+    )
     if args.fuse_conv_bn:
         model = fuse_conv_bn(model)
     # old versions did not save class info in checkpoints, this walkaround is
     # for backward compatibility
-    if 'CLASSES' in checkpoint.get('meta', {}):
-        model.CLASSES = checkpoint['meta']['CLASSES']
+    if 'CLASSES' in checkpoint.get("meta", {}):
+        model.CLASSES = checkpoint["meta"]["CLASSES"]
     else:
         model.CLASSES = dataset.CLASSES
     # palette for visualization in segmentation tasks
-    if 'PALETTE' in checkpoint.get('meta', {}):
-        model.PALETTE = checkpoint['meta']['PALETTE']
-    elif hasattr(dataset, 'PALETTE'):
+    if 'PALETTE' in checkpoint.get("meta", {}):
+        model.PALETTE = checkpoint["meta"]["PALETTE"]
+    elif hasattr(dataset, "PALETTE"):
         # segmentation dataset has `PALETTE` attribute
         model.PALETTE = dataset.PALETTE
 
     # add occupancy prediction
     if not distributed:
-        assert False
-        # model = MMDataParallel(model, device_ids=[0])
-        # outputs = single_gpu_test(model, data_loader, args.show, args.show_dir)
+        # Following was the original code.
+        # ============================================
+        # assert False
+        # # model = MMDataParallel(model, device_ids=[0])
+        # # outputs = single_gpu_test(model, data_loader, args.show, args.show_dir)
+        # ============================================
+        # Following is the code written by DEB for debugging.
+        # ============================================
+        model = MMDataParallel(model, device_ids=[0])  # DEB
+        # outputs = single_gpu_test(
+        #     model, data_loader, args.show, args.show_dir
+        # )  # DEB
+        # ============================================
     else:
         model = MMDistributedDataParallel(
             model.cuda(),
             device_ids=[torch.cuda.current_device()],
-            broadcast_buffers=False)
+            broadcast_buffers=False
+        )
+        # outputs = custom_multi_gpu_test(
+        #     model, data_loader, args.tmpdir, args.gpu_collect
+        # )
     
     occ_thresholds = [0.25]
     for index, occ_threshold in enumerate(occ_thresholds):
-        results = custom_multi_gpu_test(model, data_loader, args.tmpdir,
-                                        args.gpu_collect, occ_threshold)
-        bbox_predictions = results['bbox_results']
-        occupancy_results = results['occupancy_results']
-        flow_results = results['flow_results']
+        results = None
+        if not distributed:
+            results = single_gpu_test(
+                model, data_loader, args.show, args.show_dir
+            )  # DEB
+        else:
+            results = custom_multi_gpu_test(
+                model, data_loader, args.tmpdir,
+                args.gpu_collect, occ_threshold
+            )
+        if results is None:
+            return
+        
+        bbox_predictions = results["bbox_results"]
+        occupancy_results = results["occupancy_results"]
+        flow_results = results["flow_results"]
 
         rank, _ = get_dist_info()
         if rank == 0:
             if args.out:
-                print(f'\nwriting results to {args.out}')
+                print(f"\nwriting results to {args.out}")
                 assert False
             
             kwargs = {} if args.eval_options is None else args.eval_options
-            kwargs['jsonfile_prefix'] = osp.join('test', args.config.split(
-                '/')[-1].split('.')[-2], time.ctime().replace(' ', '_').replace(':', '_'))
+            kwargs["jsonfile_prefix"] = osp.join(
+                "test", 
+                args.config.split("/")[-1].split(".")[-2], 
+                time.ctime().replace(" ", "_").replace(":", "_")
+            )
             if args.format_only and bbox_predictions is not None:
                 dataset.format_results(bbox_predictions, **kwargs)
 
             if args.eval:
-                eval_kwargs = cfg.get('evaluation', {}).copy()
+                eval_kwargs = cfg.get("evaluation", {}).copy()
                 # hard-code way to remove EvalHook args
                 for key in [
-                        'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best',
-                        'rule'
+                    "interval", "tmpdir", 
+                    "start", "gpu_collect", 
+                    "save_best", "rule"
                 ]:
                     eval_kwargs.pop(key, None)
 
-                eval_kwargs.update(dict(metric=args.eval, **kwargs))
-                if occupancy_results is not None and 'iou' in args.eval:
-                    dataset.evaluate_occ_iou(occupancy_results, flow_results, 
-                                             show_dir=args.show_dir, occ_threshold=occ_threshold)
+                eval_kwargs.update(
+                    dict(metric=args.eval, **kwargs)
+                )
+                if ((occupancy_results is not None) and 
+                    ("iou" in args.eval)):
+                    dataset.evaluate_occ_iou(
+                        occupancy_results, 
+                        flow_results, 
+                        show_dir=args.show_dir, 
+                        occ_threshold=occ_threshold
+                    )
                 
-                if 'bbox' in args.eval and bbox_predictions is not None:
+                if (("bbox" in args.eval) and 
+                    (bbox_predictions is not None)):
                     # evaluate in the whole dataset for NDS
-                    print(dataset.evaluate(bbox_predictions, **eval_kwargs))
+                    print(dataset.evaluate(
+                        bbox_predictions, 
+                        **eval_kwargs
+                    ))
 
 
 if __name__ == '__main__':
