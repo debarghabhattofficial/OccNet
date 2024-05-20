@@ -16,5 +16,6 @@ python "./tools/test.py" \
     $CONFIG \
     $CHECKPOINT \
     --out $RESULTS \
-    --eval bbox
+    --eval bbox \
+    --debug
 # ==========================================================================

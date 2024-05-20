@@ -28,7 +28,7 @@ import pycocotools.mask as mask_util
 import time
 
 import logging
-from utils import Logger
+from .logger import Logger
 # ================================================
 
 def custom_encode_mask_results(mask_results):
@@ -175,9 +175,15 @@ def single_gpu_test(model,
     model.eval()
     results = []
     dataset = data_loader.dataset
-    prog_bar = mmcv.ProgressBar(len(dataset))
-    total_process_time = 0.0
+    prig_bar = None
 
+    if premature_stop:
+        prog_bar = mmcv.ProgressBar(premature_stop_num)
+    else:
+        prog_bar = mmcv.ProgressBar(len(dataset))
+
+    total_process_time = 0.0
+    
     for i, data in enumerate(data_loader):
         if debug:
             # Record the time when we start running inference.
@@ -205,10 +211,14 @@ def single_gpu_test(model,
                 break
         # =============================================================
         
+    print("")
     avg_fps = 0.0
     if debug:
         # Calculate average FPS.
-        avg_fps = len(data_loader) / total_process_time
+        if premature_stop:
+            avg_fps = premature_stop_num / total_process_time
+        else:
+            avg_fps = len(data_loader) / total_process_time
         logger.debug(f"Average FPS: {avg_fps:.2f}")
 
     return results, avg_fps
