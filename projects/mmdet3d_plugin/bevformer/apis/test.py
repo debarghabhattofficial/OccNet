@@ -17,10 +17,19 @@ from mmcv.runner import get_dist_info
 
 from mmdet.core import encode_mask_results
 
-
 import mmcv
 import numpy as np
 import pycocotools.mask as mask_util
+
+# NOTE: Following code was added by DEB to 
+# set up a logger for profiling the FPS of the
+# model.
+# ================================================
+import time
+
+import logging
+from utils import Logger
+# ================================================
 
 def custom_encode_mask_results(mask_results):
     """Encode bitmap mask to RLE code. Semantic Masks only
@@ -135,6 +144,7 @@ def collect_results_cpu(result_part, size, tmpdir=None):
 def single_gpu_test(model,
                     data_loader,
                     show=False,
+                    debug=False,
                     out_dir=None,
                     show_score_thr=0.3,
                     premature_stop=False,
@@ -156,33 +166,37 @@ def single_gpu_test(model,
     Returns:
         list[dict]: The prediction results.
     """
+    # Set up logger.
+    logger = Logger.get_logger(
+        name=__name__, 
+        level=logging.DEBUG if debug else logging.INFO
+    )
+
     model.eval()
     results = []
     dataset = data_loader.dataset
     prog_bar = mmcv.ProgressBar(len(dataset))
-    for i, data in enumerate(data_loader):
-        with torch.no_grad():
-            result = model(return_loss=False, rescale=True, **data)
-            # result["occ_results"] = result["occ_results"].squeeze(0).cpu().numpy().astype(np.uint8)  # DEB
-            # result["flow_results"] = result["flow_results"].squeeze(0).cpu().numpy().astype(np.uint8)  # DEB
+    total_process_time = 0.0
 
-        # results.extend([result.squeeze(dim=0).cpu().numpy().astype(np.uint8)])  # ORIGINAL
+    for i, data in enumerate(data_loader):
+        if debug:
+            # Record the time when we start running inference.
+            start_time = time.time()
+            # Run inference on batch of sample.
+            # NOTE: When debugging to profile FPS, ensure that
+            # each batch has only one data sample.
+            with torch.no_grad():
+                result = model(return_loss=False, rescale=True, **data)
+            # Record the time when we stop running inference.
+            end_time = time.time()
+            # Update the total process time.
+            total_process_time += end_time - start_time
+        else:
+            with torch.no_grad():
+                result = model(return_loss=False, rescale=True, **data)
+
         results.extend([result])
 
-        batch_size = len(result)
-        # # Following was the original code for updating the 
-        # # progress bar. This is incorrect because progrress
-        # # bar is being updated 'batch_size' no. of times, which
-        # # is always set to 2 on account of result being a dict object
-        # # with 2 key-value pairs.
-        # # ===========================================================
-        # for _ in range(batch_size):
-        #     prog_bar.update()
-        # # ===========================================================
-        
-        # Following is the correct ay of updating the progress bar.
-        # This is written by DEB.
-        # =============================================================
         prog_bar.update()
 
         # Stop prematurely when debugging (if required).
@@ -190,7 +204,14 @@ def single_gpu_test(model,
             if i + 1 == premature_stop_num:
                 break
         # =============================================================
-    return results
+        
+    avg_fps = 0.0
+    if debug:
+        # Calculate average FPS.
+        avg_fps = len(data_loader) / total_process_time
+        logger.debug(f"Average FPS: {avg_fps:.2f}")
+
+    return results, avg_fps
 
 
 def collect_results_gpu(result_part, size):

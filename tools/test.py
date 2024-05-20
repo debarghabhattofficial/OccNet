@@ -34,10 +34,15 @@ from mmdet.datasets import replace_ImageToTensor
 import time
 import os.path as osp
 
+# NOTE: Following code is added by DEB to add feature for
+# saving output as pickle file, prematurely exiting out of the
+# inference loop before all samples are processed, and add 
+# a logger to profile the FPS of the model during inference.
 # =============================================================
-from pprint import pprint  # DEB
-from tqdm import tqdm  # DEB
-import pickle  # DEB
+from pprint import pprint
+from tqdm import tqdm
+import pickle
+import time
 
 
 PREMATURE_STOP = True
@@ -209,6 +214,11 @@ def parse_args():
         type=int, 
         default=0
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Increase output verbosity for debugging."
+    )
     args = parser.parse_args()
     if "LOCAL_RANK" not in os.environ:
         os.environ["LOCAL_RANK"] = str(args.local_rank)
@@ -234,7 +244,6 @@ def main():
     #     ('Please specify at least one operation (save/eval/format/show the '
     #      'results / save the results) with the argument "--out", "--eval"'
     #      ', "--format-only", "--show" or "--show-dir"')
-
     if args.format_only:
         args.eval = False
         # raise ValueError('--eval and --format_only cannot be both specified')
@@ -352,15 +361,15 @@ def main():
         # ============================================
         # Following is the code written by DEB for debugging.
         # ============================================
-        model = MMDataParallel(model, device_ids=[0])  # DEB
-        outputs = single_gpu_test(
+        model = MMDataParallel(model, device_ids=[0])
+        outputs, avg_fps = single_gpu_test(
             model=model, 
             data_loader=data_loader, 
             show=args.show, 
             out_dir=args.show_dir,
             premature_stop=PREMATURE_STOP,
             premature_stop_num=PREMATURE_STOP_NUM
-        )  # DEB
+        )
         # ============================================
     else:
         model = MMDistributedDataParallel(
