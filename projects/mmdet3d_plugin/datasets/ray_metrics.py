@@ -157,6 +157,13 @@ def calc_metrics(pcd_pred_list, pcd_gt_list):
 
     ave_count = np.zeros([len(thresholds), len(occ_class_names)])
 
+    print(f"pcd_pred_list shape: {len(pcd_pred_list)}")  # DEB
+    print(f"pcd_pred_list: \n{pcd_pred_list}")  # DEB
+    print("-" * 75)  # DEB
+    print(f"pcd_gt_list shape: {len(pcd_gt_list)}")  # DEB
+    print(f"pcd_gt_list: \n{pcd_gt_list}")  # DEB
+    print("-" * 75)  # DEB
+
     for pcd_pred, pcd_gt in zip(pcd_pred_list, pcd_gt_list):
         for j, threshold in enumerate(thresholds):
             # L1

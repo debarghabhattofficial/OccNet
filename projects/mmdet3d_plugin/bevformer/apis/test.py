@@ -136,7 +136,9 @@ def single_gpu_test(model,
                     data_loader,
                     show=False,
                     out_dir=None,
-                    show_score_thr=0.3):
+                    show_score_thr=0.3,
+                    premature_stop=False,
+                    premature_stop_num=100):
     """Test model with single gpu.
 
     This method tests model with single gpu and gives the 'show' option.
@@ -182,6 +184,11 @@ def single_gpu_test(model,
         # This is written by DEB.
         # =============================================================
         prog_bar.update()
+
+        # Stop prematurely when debugging (if required).
+        if premature_stop:
+            if i + 1 == premature_stop_num:
+                break
         # =============================================================
     return results
 
