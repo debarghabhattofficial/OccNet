@@ -1,9 +1,9 @@
 _base_ = [
-    '../datasets/custom_nus-3d.py',
-    '../_base_/default_runtime.py'
+    "../datasets/custom_nus-3d.py",
+    "../_base_/default_runtime.py"
 ]
 plugin = True
-plugin_dir = 'projects/mmdet3d_plugin/'
+plugin_dir = "projects/mmdet3d_plugin/"
 
 # If point cloud range is changed, the models should also 
 # change their point cloud range accordingly.

@@ -46,7 +46,7 @@ import time
 
 
 PREMATURE_STOP = True
-PREMATURE_STOP_NUM = 500
+PREMATURE_STOP_NUM = 10
 
 
 # Following code was added by DEB to save the output as
@@ -103,8 +103,9 @@ def parse_args():
         help="test config file path"
     )
     parser.add_argument(
-        "checkpoint", 
-        help="checkpoint file"
+        "--ckpt_path", 
+        type=str,
+        help="path to checkpoint file"
     )
     parser.add_argument(
         "--out", 
@@ -248,51 +249,51 @@ def main():
         args.eval = False
         # raise ValueError('--eval and --format_only cannot be both specified')
 
-    if args.out is not None and not args.out.endswith(('.pkl', '.pickle')):
-        raise ValueError('The output file must be a pkl file.')
+    if (args.out is not None) and (not args.out.endswith((".pkl", ".pickle"))):
+        raise ValueError("The output file must be a pkl file.")
 
     cfg = Config.fromfile(args.config)
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
     # import modules from string list.
-    if cfg.get('custom_imports', None):
+    if cfg.get("custom_imports", None):
         from mmcv.utils import import_modules_from_strings
-        import_modules_from_strings(**cfg['custom_imports'])
+        import_modules_from_strings(**cfg["custom_imports"])
 
     # import modules from plguin/xx, registry will be updated
-    if hasattr(cfg, 'plugin'):
+    if hasattr(cfg, "plugin"):
         if cfg.plugin:
             import importlib
-            if hasattr(cfg, 'plugin_dir'):
+            if hasattr(cfg, "plugin_dir"):
                 plugin_dir = cfg.plugin_dir
                 _module_dir = os.path.dirname(plugin_dir)
-                _module_dir = _module_dir.split('/')
+                _module_dir = _module_dir.split("/")
                 _module_path = _module_dir[0]
 
                 for m in _module_dir[1:]:
-                    _module_path = _module_path + '.' + m
+                    _module_path = _module_path + "." + m
                 print(_module_path)
                 plg_lib = importlib.import_module(_module_path)
             else:
                 # import dir is the dirpath for the config file
                 _module_dir = os.path.dirname(args.config)
-                _module_dir = _module_dir.split('/')
+                _module_dir = _module_dir.split("/")
                 _module_path = _module_dir[0]
                 for m in _module_dir[1:]:
-                    _module_path = _module_path + '.' + m
+                    _module_path = _module_path + "." + m
                 print(_module_path)
                 plg_lib = importlib.import_module(_module_path)
 
     # set cudnn_benchmark
-    if cfg.get('cudnn_benchmark', False):
+    if cfg.get("cudnn_benchmark", False):
         torch.backends.cudnn.benchmark = True
 
     cfg.model.pretrained = None
-    # in case the test dataset is concatenated
+    # in case the test dataset is concatenatnot args.out.endswith((".pkl", ".pickle"))ed
     samples_per_gpu = 1
     if isinstance(cfg.data.test, dict):
         cfg.data.test.test_mode = True
-        samples_per_gpu = cfg.data.test.pop('samples_per_gpu', 1)
+        samples_per_gpu = cfg.data.test.pop("samples_per_gpu", 1)
         if samples_per_gpu > 1:
             # Replace 'ImageToTensor' to 'DefaultFormatBundle'
             cfg.data.test.pipeline = replace_ImageToTensor(
@@ -301,13 +302,13 @@ def main():
         for ds_cfg in cfg.data.test:
             ds_cfg.test_mode = True
         samples_per_gpu = max(
-            [ds_cfg.pop('samples_per_gpu', 1) for ds_cfg in cfg.data.test])
+            [ds_cfg.pop("samples_per_gpu", 1) for ds_cfg in cfg.data.test])
         if samples_per_gpu > 1:
             for ds_cfg in cfg.data.test:
                 ds_cfg.pipeline = replace_ImageToTensor(ds_cfg.pipeline)
 
     # init distributed env first, since logger depends on the dist info.
-    if args.launcher == 'none':
+    if args.launcher == "none":
         distributed = False
     else:
         distributed = True
@@ -332,25 +333,28 @@ def main():
 
     # build the model and load checkpoint
     cfg.model.train_cfg = None
-    model = build_model(cfg.model, test_cfg=cfg.get('test_cfg'))
-    fp16_cfg = cfg.get('fp16', None)
+    model = build_model(cfg.model, test_cfg=cfg.get("test_cfg"))
+    fp16_cfg = cfg.get("fp16", None)
     if fp16_cfg is not None:
         wrap_fp16_model(model)
-    checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+    checkpoint = None
+    if args.ckpt_path is not None:
+        checkpoint = load_checkpoint(model, args.ckpt, map_location="cpu")
     if args.fuse_conv_bn:
         model = fuse_conv_bn(model)
     # old versions did not save class info in checkpoints, this walkaround is
-    # for backward compatibility
-    if 'CLASSES' in checkpoint.get('meta', {}):
-        model.CLASSES = checkpoint['meta']['CLASSES']
-    else:
-        model.CLASSES = dataset.CLASSES
-    # palette for visualization in segmentation tasks
-    if 'PALETTE' in checkpoint.get('meta', {}):
-        model.PALETTE = checkpoint['meta']['PALETTE']
-    elif hasattr(dataset, 'PALETTE'):
-        # segmentation dataset has `PALETTE` attribute
-        model.PALETTE = dataset.PALETTE
+    # for backward compatibility.
+    if args.ckpt_path:
+        if "CLASSES" in checkpoint.get("meta", {}):
+            model.CLASSES = checkpoint["meta"]["CLASSES"]
+        else:
+            model.CLASSES = dataset.CLASSES
+        # palette for visualization in segmentation tasks
+        if "PALETTE" in checkpoint.get("meta", {}):
+            model.PALETTE = checkpoint["meta"]["PALETTE"]
+        elif hasattr(dataset, "PALETTE"):
+            # segmentation dataset has `PALETTE` attribute
+            model.PALETTE = dataset.PALETTE
 
     if not distributed:
         # Following was the original code.

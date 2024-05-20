@@ -1,4 +1,4 @@
-# BEvFormer-small consumes at lease 10500M GPU memory
+# BEVFormer-small consumes at lease 10500M GPU memory
 # compared to bevformer_base, bevformer_small has
 # smaller BEV: 200*200 -> 150*150
 # less encoder layers: 6 -> 3
@@ -7,11 +7,11 @@
 # with_cp of backbone = True
 
 _base_ = [
-    '../datasets/custom_nus-3d.py',
-    '../_base_/default_runtime.py'
+    "../datasets/custom_nus-3d.py",
+    "../_base_/default_runtime.py"
 ]
 plugin = True
-plugin_dir = 'projects/mmdet3d_plugin/'
+plugin_dir = "projects/mmdet3d_plugin/"
 
 # If point cloud range is changed, the models should also 
 # change their point cloud range accordingly.
@@ -77,7 +77,7 @@ model = dict(
         pretrained="torchvision://resnet50"),
     img_neck=dict(
         type="FPN",
-        in_channels=[2048],
+        in_channels=[512],
         out_channels=_dim_,
         start_level=0,
         add_extra_convs="on_output",
