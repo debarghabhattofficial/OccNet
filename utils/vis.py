@@ -30,7 +30,7 @@ color_map = np.array([
     [0, 175, 0, 255],  # vegetation           green
     [255, 255, 255, 255],  # free             white
 ], dtype=np.uint8)
-color = colors_map[:, :3] / 255
+color = color_map[:, :3] / 255
 
 
 def voxel2points(voxel, voxelSize, range=[-40.0, -40.0, -1.0, 40.0, 40.0, 5.4], ignore_labels=[17, 255]):
