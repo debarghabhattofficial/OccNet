@@ -1,4 +1,4 @@
-# BEVFormer-small consumes at lease 10500M GPU memory
+# BEVFormer-tiny consumes at lease 10500M GPU memory
 # compared to bevformer_base, bevformer_small has
 # smaller BEV: 200*200 -> 150*150
 # less encoder layers: 6 -> 3
@@ -55,7 +55,7 @@ input_modality = dict(
 _dim_ = 256
 _pos_dim_ = _dim_ // 2
 _ffn_dim_ = _dim_ * 2
-_num_levels_ = 4
+_num_levels_ = 1
 _num_classes_ = len(occ_class_names)
 bev_h_ = 200  # ORIGINAL: 150, DEB: 200
 bev_w_ = 200  # ORIGINAL: 150, DEB: 200
@@ -81,7 +81,7 @@ model = dict(
         out_channels=_dim_,
         start_level=0,
         add_extra_convs="on_output",
-        num_outs=4,
+        num_outs=_num_levels_,
         relu_before_extra_convs=True),
     pts_bbox_head=dict(
         type="BEVFormerOccHead",
@@ -132,7 +132,8 @@ model = dict(
                                 embed_dims=_dim_,
                                 num_points=8,  # DEB [NOTE]: Try out 4.
                                 num_levels=_num_levels_),
-                            embed_dims=_dim_)
+                            embed_dims=_dim_
+                        )
                     ],
                     feedforward_channels=_ffn_dim_,
                     ffn_dropout=0.1,
@@ -154,7 +155,7 @@ model = dict(
                     type="HungarianAssigner3D",
                     cls_cost=dict(type="FocalLossCost", weight=2.0),
                     reg_cost=dict(type="BBox3DL1Cost", weight=0.25),
-                    iou_cost=dict(type="IoUCost", weight=0.0),
+                    iou_cost=dict(type="IoUCost", weight=0.0), # Fake cost. This is just to make it compatible with DETR head.
                     pc_range=point_cloud_range)))))
 
 dataset_type = "NuSceneOcc"
