@@ -28,6 +28,37 @@ import torch.multiprocessing  # DEB
 torch.multiprocessing.set_sharing_strategy("file_system")  # DEB
 # ======================================================================
 
+# =============================================================
+from pprint import pprint  # DEB
+from tqdm import tqdm  # DEB
+import pickle  # DEB
+
+
+# Following code was added by DEB to save the output as
+# as pickled string where each element is a dictionary
+# containing the results for the samples in the dataset.
+def save_output_as_pickle(out_dict, out_path):
+    # Initialize lists to store tensors
+    num_results = len(out_dict)
+
+    # Add the results to the output dictionary.
+    out_dict["num_results"] = num_results
+
+    # Save the output results dictionary as a #
+    # pickled file at specified path.
+    # Check if the parent directory exists.
+    par_dir = os.path.dirname(out_path)
+    if not os.path.exists(par_dir):
+        # If not, create the directory.
+        os.makedirs(par_dir)
+    # Save the pickle file.
+    with open(out_path, "wb") as f:
+        pickle.dump(out_dict, f)
+        print(f"Saved the output results to: {out_path}")
+
+    return
+# =============================================================
+
 
 @DATASETS.register_module()
 class NuSceneOcc(NuScenesDataset):
@@ -150,7 +181,15 @@ class NuSceneOcc(NuScenesDataset):
                 continue
             return data
 
-    def evaluate_miou(self, occ_results, runner=None, show_dir=None, **eval_kwargs):
+    def evaluate_miou(self, 
+                      occ_results, 
+                      runner=None, 
+                      show_dir=None,
+                      save_out=False,
+                      out_path=None,
+                      premature_stop=False,
+                      premature_stop_num=100, 
+                      **eval_kwargs):
         occ_gts = []
         flow_gts = []
         occ_preds = []
@@ -194,7 +233,41 @@ class NuSceneOcc(NuScenesDataset):
             flow_gts.append(gt_flow)
             occ_preds.append(occ_results[data_id]['occ_results'].cpu().numpy())
             flow_preds.append(occ_results[data_id]['flow_results'].cpu().numpy())
+
+            # Stop prematurely when debugging (if required).
+            if premature_stop:
+                if i + 1 == premature_stop_num:  # DEB
+                    break  # DEB
+
+        # Save the output with corresponding ground truths.
+        if (save_out == True) and (out_path is not None):
+            # Create the output dictionary.
+            out_results = {
+                "occ_preds": occ_preds,
+                "flow_preds": flow_preds,
+                "occ_gts": occ_gts,
+                "flow_gts": flow_gts
+            }
+            # Save the output dictionary as a pickled file.num_results = len(out_dict)
+            # Add the results to the output dictionary.
+            out_results["num_results"] = len(out_results)
+            # Save the output results dictionary as a #
+            # pickled file at specified path.
+            # Check if the parent directory exists.
+            par_dir = os.path.dirname(out_path)
+            if not os.path.exists(par_dir):
+                # If not, create the directory.
+                os.makedirs(par_dir)
+            # Save the pickle file.
+            with open(out_path, "wb") as f:
+                pickle.dump(out_results, f)
+                print(f"Saved the output results to: {out_path}")
+
+            # NOTE: The following step is optional.
+            # Delete output results dictionary to save memory.
+            del out_results
         
+        # Evaluate the results using the ray-based mIoU metric.
         ray_based_miou(occ_preds, occ_gts, flow_preds, flow_gts, lidar_origins)
 
     def format_results(self, occ_results, submission_prefix, **kwargs):
