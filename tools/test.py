@@ -53,12 +53,12 @@ PREMATURE_STOP_NUM = 500
 # as pickled string where each element is a dictionary
 # containing the results for the samples in the dataset.
 def save_output_as_pickle(results, out_path):
-    # Initialize lists to store tensors
+    # Initialize lists to store tensors.
     num_results = 0
     occ_results_rec = []
     flow_results_rec = []
 
-    # Extract tensors from each dictionary
+    # Extract tensors from each dictionary.
     for result_d in tqdm(results, unit="result"):
         occ_results_rec.append(
             result_d["occ_results"].cpu().numpy()
