@@ -46,7 +46,7 @@ import time
 
 
 PREMATURE_STOP = True
-PREMATURE_STOP_NUM = 50
+PREMATURE_STOP_NUM = 10
 
 
 # Following code was added by DEB to save the output as
@@ -366,6 +366,7 @@ def main():
             model=model, 
             data_loader=data_loader, 
             show=args.show, 
+            debug=args.debug,
             out_dir=args.show_dir,
             premature_stop=PREMATURE_STOP,
             premature_stop_num=PREMATURE_STOP_NUM
