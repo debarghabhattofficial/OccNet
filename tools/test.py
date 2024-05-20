@@ -46,7 +46,7 @@ import time
 
 
 PREMATURE_STOP = True
-PREMATURE_STOP_NUM = 10
+PREMATURE_STOP_NUM = 500
 
 
 # Following code was added by DEB to save the output as
